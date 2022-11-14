@@ -7,16 +7,16 @@
     // clippy::expect_used,
     // clippy::unwrap_used
 )]
-mod app;
 mod comms;
 mod floats;
+mod gui;
 mod hotkeys;
 mod manager;
 
-use app::TotalMixVolumeControl;
 use comms::{UdpReceiver, UdpSender};
 use eframe::NativeOptions;
 use egui::{pos2, vec2};
+use gui::VolumeControlApp;
 use hotkeys::HotKey;
 use manager::Manager;
 use std::{net::SocketAddrV4, sync::Arc, thread};
@@ -79,6 +79,6 @@ fn main() {
     eframe::run_native(
         "TotalMix Volume Control",
         native_options,
-        Box::new(|cc| Box::new(TotalMixVolumeControl::new(cc, manager))),
+        Box::new(|cc| Box::new(VolumeControlApp::new(cc, manager))),
     );
 }
