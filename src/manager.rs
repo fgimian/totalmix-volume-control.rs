@@ -1,9 +1,11 @@
-use std::fmt;
-
-use crate::comms::{Receiver, Sender};
+use crate::{
+    comms::{Receiver, Sender},
+    floats,
+};
 use anyhow::Result;
 use parking_lot::Mutex;
 use rosc::{OscMessage, OscPacket, OscType};
+use std::fmt;
 use thiserror::Error;
 
 const VOLUME_OSC_ADDR: &str = "/1/mastervolume";
@@ -22,7 +24,7 @@ struct FineIncrementRangeError;
 #[error("max volume must be no more than 1.0")]
 struct MaxVolumeRangeError;
 
-pub(crate) struct VolumeManager<S: Sender, R: Receiver> {
+pub struct Manager<S: Sender, R: Receiver> {
     increment: f32,
     fine_increment: f32,
     max_volume: f32,
@@ -33,7 +35,7 @@ pub(crate) struct VolumeManager<S: Sender, R: Receiver> {
     receiver: R,
 }
 
-impl<S: Sender, R: Receiver> fmt::Debug for VolumeManager<S, R> {
+impl<S: Sender, R: Receiver> fmt::Debug for Manager<S, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("VolumeManager")
             // .field("increment", &self.increment)
@@ -46,9 +48,9 @@ impl<S: Sender, R: Receiver> fmt::Debug for VolumeManager<S, R> {
     }
 }
 
-impl<S: Sender, R: Receiver> VolumeManager<S, R> {
+impl<S: Sender, R: Receiver> Manager<S, R> {
     pub fn new(sender: S, receiver: R) -> Self {
-        VolumeManager {
+        Self {
             increment: 0.02,
             fine_increment: 0.01,
             max_volume: 1.0,
@@ -95,7 +97,7 @@ impl<S: Sender, R: Receiver> VolumeManager<S, R> {
     }
 
     pub fn dimmed(&self) -> bool {
-        self.dim() == 1.0
+        floats::roughly_eq(self.dim(), 1.0)
     }
 
     fn dim(&self) -> f32 {
@@ -104,7 +106,9 @@ impl<S: Sender, R: Receiver> VolumeManager<S, R> {
     }
 
     pub fn initialized(&self) -> bool {
-        self.volume() != -1.0 && self.volume_db().is_some() && self.dim() != -1.0
+        floats::roughly_ne(self.volume(), -1.0)
+            && self.volume_db().is_some()
+            && floats::roughly_ne(self.dim(), -1.0)
     }
 
     pub fn request_volume(&self) -> Result<()> {
@@ -173,7 +177,11 @@ impl<S: Sender, R: Receiver> VolumeManager<S, R> {
         }
 
         let mut dim = self.dim.lock();
-        let new_dim = if *dim == 1.0 { 0.0 } else { 1.0 };
+        let new_dim = if floats::roughly_eq(*dim, 1.0) {
+            0.0
+        } else {
+            1.0
+        };
         self.send(DIM_OSC_ADDR, 1.0)?;
         *dim = new_dim;
 
@@ -199,7 +207,7 @@ impl<S: Sender, R: Receiver> VolumeManager<S, R> {
             new_volume = self.max_volume;
         }
 
-        if new_volume == *volume {
+        if floats::roughly_eq(new_volume, *volume) {
             return Ok(false);
         }
 
@@ -220,7 +228,7 @@ impl<S: Sender, R: Receiver> VolumeManager<S, R> {
             new_volume = 0.0;
         }
 
-        if new_volume == *volume {
+        if floats::roughly_eq(new_volume, *volume) {
             return Ok(false);
         }
 

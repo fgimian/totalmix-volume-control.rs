@@ -9,6 +9,7 @@
 )]
 mod app;
 mod comms;
+mod floats;
 mod hotkeys;
 mod manager;
 
@@ -16,8 +17,8 @@ use app::TotalMixVolumeControl;
 use comms::{UdpReceiver, UdpSender};
 use eframe::NativeOptions;
 use egui::{pos2, vec2};
-use hotkeys::{HotKey, HotKeys};
-use manager::VolumeManager;
+use hotkeys::HotKey;
+use manager::Manager;
 use std::{net::SocketAddrV4, sync::Arc, thread};
 
 fn main() {
@@ -25,10 +26,10 @@ fn main() {
     let receiver =
         UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
 
-    let manager = Arc::new(VolumeManager::new(sender, receiver));
+    let manager = Arc::new(Manager::new(sender, receiver));
     // Create the thread that will receive volume changes from the device.
     {
-        let manager = manager.clone();
+        let manager = Arc::clone(&manager);
         thread::Builder::new()
             .name("receiver".to_string())
             .spawn(move || {
@@ -43,13 +44,13 @@ fn main() {
     // Create the thread that will receive hotkeys and update the volume.  It will also send a
     // message to the main GUI thread.
     {
-        let manager = manager.clone();
+        let manager = Arc::clone(&manager);
         thread::Builder::new()
             .name("hotkeys".to_string())
             .spawn(move || {
-                let hotkeys = HotKeys::new().unwrap();
+                hotkeys::register().unwrap();
                 loop {
-                    let hotkey = hotkeys.receive().unwrap();
+                    let hotkey = hotkeys::receive().unwrap();
                     match hotkey {
                         HotKey::VolumeUp => manager.increase_volume().unwrap(),
                         HotKey::VolumeDown => manager.decrease_volume().unwrap(),
@@ -62,7 +63,7 @@ fn main() {
             .unwrap();
     }
 
-    let manager = manager.clone();
+    let manager = Arc::clone(&manager);
 
     let native_options = NativeOptions {
         always_on_top: true,

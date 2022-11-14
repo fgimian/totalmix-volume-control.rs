@@ -1,6 +1,6 @@
 use crate::{
     comms::{UdpReceiver, UdpSender},
-    manager::VolumeManager,
+    manager::Manager,
 };
 use eframe::{App, CreationContext};
 use egui::{
@@ -10,8 +10,8 @@ use egui::{
 };
 use std::sync::Arc;
 
-pub(crate) struct TotalMixVolumeControl {
-    volume_manager: Arc<VolumeManager<UdpSender, UdpReceiver>>,
+pub struct TotalMixVolumeControl {
+    manager: Arc<Manager<UdpSender, UdpReceiver>>,
     background_rounding: f32,
     background_color: Color32,
     heading_and_volume_bar_height: f32,
@@ -24,16 +24,13 @@ pub(crate) struct TotalMixVolumeControl {
     volume_bar_height: f32,
     volume_bar_top_margin: f32,
     volume_bar_horizontal_margin: f32,
-    volume_bar_bg_color: Color32,
-    volume_bar_fg_color_normal: Color32,
-    volume_bar_fg_color_dimmed: Color32,
+    volume_bar_background_color: Color32,
+    volume_bar_foreground_color_normal: Color32,
+    volume_bar_foreground_color_dimmed: Color32,
 }
 
 impl TotalMixVolumeControl {
-    pub fn new(
-        cc: &CreationContext<'_>,
-        manager: Arc<VolumeManager<UdpSender, UdpReceiver>>,
-    ) -> Self {
+    pub fn new(cc: &CreationContext<'_>, manager: Arc<Manager<UdpSender, UdpReceiver>>) -> Self {
         // Set the default font.
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
@@ -48,7 +45,7 @@ impl TotalMixVolumeControl {
         cc.egui_ctx.set_fonts(fonts);
 
         Self {
-            volume_manager: manager,
+            manager,
             background_rounding: 10.0,
             background_color: hex_color!("#1e2328e2"),
             heading_and_volume_bar_height: 46.0,
@@ -61,9 +58,9 @@ impl TotalMixVolumeControl {
             volume_bar_height: 10.0,
             volume_bar_top_margin: 7.0,
             volume_bar_horizontal_margin: 26.0,
-            volume_bar_bg_color: hex_color!("#333333"),
-            volume_bar_fg_color_normal: hex_color!("#999999"),
-            volume_bar_fg_color_dimmed: hex_color!("#996500"),
+            volume_bar_background_color: hex_color!("#333333"),
+            volume_bar_foreground_color_normal: hex_color!("#999999"),
+            volume_bar_foreground_color_dimmed: hex_color!("#996500"),
         }
     }
 }
@@ -120,12 +117,8 @@ impl App for TotalMixVolumeControl {
                 );
 
                 let (volume_db, volume, dimmed) = {
-                    let volume_db = self.volume_manager.volume_db().unwrap_or("-".to_string());
-                    (
-                        volume_db,
-                        self.volume_manager.volume(),
-                        self.volume_manager.dimmed(),
-                    )
+                    let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
+                    (volume_db, self.manager.volume(), self.manager.dimmed())
                 };
                 // ctx.request_repaint();
 
@@ -139,9 +132,10 @@ impl App for TotalMixVolumeControl {
                         ui.label(
                             RichText::new(volume_db)
                                 .size(self.volume_readout_font_size)
-                                .color(match dimmed {
-                                    true => self.volume_readout_color_dimmed,
-                                    false => self.volume_readout_color_normal,
+                                .color(if dimmed {
+                                    self.volume_readout_color_dimmed
+                                } else {
+                                    self.volume_readout_color_normal
                                 }),
                         );
                     },
@@ -156,7 +150,7 @@ impl App for TotalMixVolumeControl {
                         ui.add_space(self.volume_bar_top_margin);
 
                         // Ideas pinched from the implementation of ProgressBar.
-                        let (volume_bar_bg, _response) = ui.allocate_exact_size(
+                        let (volume_bar_background, _response) = ui.allocate_exact_size(
                             vec2(
                                 ui.available_width() - self.volume_bar_horizontal_margin * 2.0,
                                 self.volume_bar_height,
@@ -164,23 +158,27 @@ impl App for TotalMixVolumeControl {
                             Sense::hover(),
                         );
 
-                        let volume_bar_fg = Rect::from_min_size(
-                            volume_bar_bg.min,
-                            vec2(volume_bar_bg.width() * volume, volume_bar_bg.height()),
+                        let volume_bar_foreground = Rect::from_min_size(
+                            volume_bar_background.min,
+                            vec2(
+                                volume_bar_background.width() * volume,
+                                volume_bar_background.height(),
+                            ),
                         );
 
                         ui.painter().rect_filled(
-                            volume_bar_bg,
+                            volume_bar_background,
                             Rounding::none(),
-                            self.volume_bar_bg_color,
+                            self.volume_bar_background_color,
                         );
 
                         ui.painter().rect_filled(
-                            volume_bar_fg,
+                            volume_bar_foreground,
                             Rounding::none(),
-                            match dimmed {
-                                true => self.volume_bar_fg_color_dimmed,
-                                false => self.volume_bar_fg_color_normal,
+                            if dimmed {
+                                self.volume_bar_foreground_color_dimmed
+                            } else {
+                                self.volume_bar_foreground_color_normal
                             },
                         );
                     },

@@ -13,7 +13,7 @@ pub trait Receiver {
     fn receive(&self) -> Result<OscPacket>;
 }
 
-pub(crate) struct UdpSender {
+pub struct UdpSender {
     socket: UdpSocket,
     addr: SocketAddrV4,
 }
@@ -21,7 +21,7 @@ pub(crate) struct UdpSender {
 impl UdpSender {
     pub fn new(addr: SocketAddrV4) -> Result<Self> {
         let bind_addr = SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 0);
-        Ok(UdpSender {
+        Ok(Self {
             socket: UdpSocket::bind(bind_addr)?,
             addr,
         })
@@ -31,12 +31,12 @@ impl UdpSender {
 impl Sender for UdpSender {
     fn send(&self, packet: &OscPacket) -> Result<()> {
         let packet = rosc::encoder::encode(packet)?;
-        self.socket.send_to(&packet, &self.addr)?;
+        self.socket.send_to(&packet, self.addr)?;
         Ok(())
     }
 }
 
-pub(crate) struct UdpReceiver {
+pub struct UdpReceiver {
     socket: UdpSocket,
 }
 
@@ -44,7 +44,7 @@ impl UdpReceiver {
     pub fn bind(addr: SocketAddrV4) -> Result<Self> {
         let socket = UdpSocket::bind(addr)?;
         socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-        Ok(UdpReceiver { socket })
+        Ok(Self { socket })
     }
 }
 
