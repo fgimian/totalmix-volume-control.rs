@@ -139,7 +139,6 @@ impl App for VolumeControlApp {
                     let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
                     (volume_db, self.manager.volume(), self.manager.dimmed())
                 };
-                // ctx.request_repaint();
 
                 // Draw the TotalMix Volume heading.
                 ui.allocate_ui_with_layout(

@@ -23,49 +23,6 @@ use manager::Manager;
 use std::{net::SocketAddrV4, sync::Arc, thread};
 
 fn main() {
-    let sender = UdpSender::new(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 7002)).unwrap();
-    let receiver =
-        UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
-
-    let manager = Arc::new(Manager::new(sender, receiver));
-    // Create the thread that will receive volume changes from the device.
-    {
-        let manager = Arc::clone(&manager);
-        thread::Builder::new()
-            .name("receiver".to_string())
-            .spawn(move || {
-                manager.request_volume().unwrap();
-                loop {
-                    if manager.recieve_volume().unwrap() {}
-                }
-            })
-            .unwrap();
-    }
-
-    // Create the thread that will receive hotkeys and update the volume.  It will also send a
-    // message to the main GUI thread.
-    {
-        let manager = Arc::clone(&manager);
-        thread::Builder::new()
-            .name("hotkeys".to_string())
-            .spawn(move || {
-                hotkeys::register().unwrap();
-                loop {
-                    let hotkey = hotkeys::receive().unwrap();
-                    match hotkey {
-                        HotKey::VolumeUp => manager.increase_volume().unwrap(),
-                        HotKey::VolumeDown => manager.decrease_volume().unwrap(),
-                        HotKey::VolumeUpFine => manager.increase_volume_fine().unwrap(),
-                        HotKey::VolumeDownfine => manager.decrease_volume_fine().unwrap(),
-                        HotKey::Mute => manager.toggle_dim().unwrap(),
-                    };
-                }
-            })
-            .unwrap();
-    }
-
-    let manager = Arc::clone(&manager);
-
     let native_options = NativeOptions {
         always_on_top: true,
         decorated: false,
@@ -80,6 +37,54 @@ fn main() {
     eframe::run_native(
         "TotalMix Volume Control",
         native_options,
-        Box::new(|cc| Box::new(VolumeControlApp::new(cc, manager))),
+        Box::new(|cc| {
+            let sender =
+                UdpSender::new(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 7002)).unwrap();
+            let receiver =
+                UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
+            let manager = Arc::new(Manager::new(sender, receiver));
+
+            // Create the thread that will receive volume changes from the device.
+            {
+                let manager = Arc::clone(&manager);
+                let ctx = cc.egui_ctx.clone();
+                thread::Builder::new()
+                    .name("receiver".to_string())
+                    .spawn(move || {
+                        manager.request_volume().unwrap();
+                        loop {
+                            if manager.recieve_volume().unwrap() {
+                                ctx.request_repaint();
+                            }
+                        }
+                    })
+                    .unwrap();
+            }
+
+            // Create the thread that will receive hotkeys and update the volume.  It will also send a
+            // message to the main GUI thread.
+            {
+                let manager = Arc::clone(&manager);
+                thread::Builder::new()
+                    .name("hotkeys".to_string())
+                    .spawn(move || {
+                        hotkeys::register().unwrap();
+                        loop {
+                            let hotkey = hotkeys::receive().unwrap();
+                            match hotkey {
+                                HotKey::VolumeUp => manager.increase_volume().unwrap(),
+                                HotKey::VolumeDown => manager.decrease_volume().unwrap(),
+                                HotKey::VolumeUpFine => manager.increase_volume_fine().unwrap(),
+                                HotKey::VolumeDownfine => manager.decrease_volume_fine().unwrap(),
+                                HotKey::Mute => manager.toggle_dim().unwrap(),
+                            };
+                        }
+                    })
+                    .unwrap();
+            }
+
+            let manager = Arc::clone(&manager);
+            Box::new(VolumeControlApp::new(cc, manager))
+        }),
     );
 }
