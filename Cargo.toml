@@ -1,0 +1,25 @@
+[package]
+name = "totalmix-volume-control"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.66"
+eframe = "0.19.0"
+egui = { version = "0.19.0", features = ["color-hex"] }
+parking_lot = "0.12.1"
+rosc = "0.9.1"
+thiserror = "1.0.37"
+
+[dependencies.windows]
+version = "0.43.0"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging"
+]
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
