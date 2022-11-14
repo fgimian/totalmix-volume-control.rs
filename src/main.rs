@@ -3,7 +3,7 @@
     clippy::all,
     clippy::pedantic,
     clippy::nursery,
-    // clippy::cargo,
+    clippy::cargo,
     // clippy::expect_used,
     // clippy::unwrap_used
 )]

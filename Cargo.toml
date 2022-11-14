@@ -2,6 +2,12 @@
 name = "totalmix-volume-control"
 version = "0.1.0"
 edition = "2021"
+description = "Provides control over RME TotalMix master volume and dim via OSC."
+repository = "https://github.com/fgimian/totalmix-volume-control.rs"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["rme", "totalmix", "osc"]
+categories = ["multimedia", "multimedia::audio"]
 
 [dependencies]
 anyhow = "1.0.66"
