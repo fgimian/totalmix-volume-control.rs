@@ -1,32 +1,19 @@
 use crate::{
     comms::{UdpReceiver, UdpSender},
+    config::Config,
     manager::Manager,
 };
 use eframe::{App, CreationContext};
 use egui::{
-    hex_color, style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Color32, Context,
-    Direction, FontData, FontDefinitions, FontFamily, FontId, Layout, Rect, Rgba, RichText,
-    Rounding, Sense, Style, TextFormat, Ui, Vec2, Visuals,
+    style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
+    FontDefinitions, FontFamily, FontId, Layout, Rect, Rgba, RichText, Rounding, Sense, Style,
+    TextFormat, Ui, Vec2, Visuals,
 };
 use std::sync::Arc;
 
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,
-    background_rounding: f32,
-    background_color: Color32,
-    heading_and_volume_bar_height: f32,
-    heading_font_size: f32,
-    heading_totalmix_color: Color32,
-    heading_volume_color: Color32,
-    volume_readout_color_normal: Color32,
-    volume_readout_color_dimmed: Color32,
-    volume_readout_font_size: f32,
-    volume_bar_height: f32,
-    volume_bar_top_margin: f32,
-    volume_bar_horizontal_margin: f32,
-    volume_bar_background_color: Color32,
-    volume_bar_foreground_color_normal: Color32,
-    volume_bar_foreground_color_dimmed: Color32,
+    config: Config,
 }
 
 impl VolumeControlApp {
@@ -58,21 +45,7 @@ impl VolumeControlApp {
 
         Self {
             manager,
-            background_rounding: 10.0,
-            background_color: hex_color!("#1e2328e2"),
-            heading_and_volume_bar_height: 46.0,
-            heading_font_size: 20.0,
-            heading_totalmix_color: Color32::WHITE,
-            heading_volume_color: hex_color!("#e06464"),
-            volume_readout_color_normal: Color32::WHITE,
-            volume_readout_color_dimmed: hex_color!("#ffa500"), // Orange
-            volume_readout_font_size: 40.0,
-            volume_bar_height: 10.0,
-            volume_bar_top_margin: 7.0,
-            volume_bar_horizontal_margin: 26.0,
-            volume_bar_background_color: hex_color!("#333333"),
-            volume_bar_foreground_color_normal: hex_color!("#999999"),
-            volume_bar_foreground_color_dimmed: hex_color!("#996500"),
+            config: Config::new(),
         }
     }
 
@@ -82,8 +55,8 @@ impl VolumeControlApp {
             "TotalMix ",
             0.0,
             TextFormat {
-                font_id: FontId::proportional(self.heading_font_size),
-                color: self.heading_totalmix_color,
+                font_id: FontId::proportional(self.config.theme.heading_font_size),
+                color: self.config.theme.heading_totalmix_color,
                 ..Default::default()
             },
         );
@@ -91,8 +64,8 @@ impl VolumeControlApp {
             "Volume",
             0.0,
             TextFormat {
-                font_id: FontId::proportional(self.heading_font_size),
-                color: self.heading_volume_color,
+                font_id: FontId::proportional(self.config.theme.heading_font_size),
+                color: self.config.theme.heading_volume_color,
                 ..Default::default()
             },
         );
@@ -102,11 +75,11 @@ impl VolumeControlApp {
     fn draw_volume_readout(&self, ui: &mut Ui, volume_db: String, dimmed: bool) {
         ui.label(
             RichText::new(volume_db)
-                .size(self.volume_readout_font_size)
+                .size(self.config.theme.volume_readout_font_size)
                 .color(if dimmed {
-                    self.volume_readout_color_dimmed
+                    self.config.theme.volume_readout_color_dimmed
                 } else {
-                    self.volume_readout_color_normal
+                    self.config.theme.volume_readout_color_normal
                 }),
         );
     }
@@ -114,13 +87,13 @@ impl VolumeControlApp {
     fn draw_volume_bar(&self, ui: &mut Ui, volume: f32, dimmed: bool) {
         // Add a little top padding to align with the text above which has a little
         // padding due to the font used.
-        ui.add_space(self.volume_bar_top_margin);
+        ui.add_space(self.config.theme.volume_bar_top_margin);
 
         // Ideas pinched from the implementation of ProgressBar.
         let (volume_bar_background, _response) = ui.allocate_exact_size(
             vec2(
-                ui.available_width() - self.volume_bar_horizontal_margin * 2.0,
-                self.volume_bar_height,
+                ui.available_width() - self.config.theme.volume_bar_horizontal_margin * 2.0,
+                self.config.theme.volume_bar_height,
             ),
             Sense::hover(),
         );
@@ -136,16 +109,16 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_background,
             Rounding::none(),
-            self.volume_bar_background_color,
+            self.config.theme.volume_bar_background_color,
         );
 
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
             if dimmed {
-                self.volume_bar_foreground_color_dimmed
+                self.config.theme.volume_bar_foreground_color_dimmed
             } else {
-                self.volume_bar_foreground_color_normal
+                self.config.theme.volume_bar_foreground_color_normal
             },
         );
     }
@@ -157,8 +130,8 @@ impl App for VolumeControlApp {
 
         CentralPanel::default()
             .frame(egui::Frame {
-                rounding: Rounding::same(self.background_rounding),
-                fill: self.background_color,
+                rounding: Rounding::same(self.config.theme.background_rounding),
+                fill: self.config.theme.background_color,
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -170,7 +143,10 @@ impl App for VolumeControlApp {
 
                 // Draw the TotalMix Volume heading.
                 ui.allocate_ui_with_layout(
-                    vec2(ui.available_width(), self.heading_and_volume_bar_height),
+                    vec2(
+                        ui.available_width(),
+                        self.config.theme.heading_and_volume_bar_height,
+                    ),
                     Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Max),
                     |ui| {
                         self.draw_heading(ui);
@@ -181,7 +157,7 @@ impl App for VolumeControlApp {
                 ui.allocate_ui_with_layout(
                     vec2(
                         ui.available_width(),
-                        ui.available_height() - self.heading_and_volume_bar_height,
+                        ui.available_height() - self.config.theme.heading_and_volume_bar_height,
                     ),
                     Layout::centered_and_justified(Direction::TopDown),
                     |ui| {
@@ -191,7 +167,10 @@ impl App for VolumeControlApp {
 
                 // Draw the volume bar that indicates the current volume.
                 ui.allocate_ui_with_layout(
-                    vec2(ui.available_width(), self.heading_and_volume_bar_height),
+                    vec2(
+                        ui.available_width(),
+                        self.config.theme.heading_and_volume_bar_height,
+                    ),
                     Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Min),
                     |ui| {
                         self.draw_volume_bar(ui, volume, dimmed);

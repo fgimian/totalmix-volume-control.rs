@@ -8,6 +8,7 @@
     // clippy::unwrap_used
 )]
 mod comms;
+mod config;
 mod floats;
 mod gui;
 mod hotkeys;
