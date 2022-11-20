@@ -5,9 +5,9 @@ use crate::{
 };
 use eframe::{App, CreationContext};
 use egui::{
-    style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
-    FontDefinitions, FontFamily, FontId, Id, Layout, Rect, Rgba, RichText, Rounding, Sense, Style,
-    TextFormat, Ui, Vec2, Visuals,
+    color, style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Color32, Context,
+    Direction, FontData, FontDefinitions, FontFamily, FontId, Id, Layout, Rect, Rgba, RichText,
+    Rounding, Sense, Style, TextFormat, Ui, Vec2, Visuals,
 };
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -19,8 +19,7 @@ pub struct VolumeControlApp {
     ui_trigger: Arc<AtomicBool>,
     config: Config,
     show_time: Option<f64>,
-    current_opacity_linear: f32,
-    current_opacity_curved: f32,
+    current_opacity: f32,
 }
 
 impl VolumeControlApp {
@@ -59,8 +58,7 @@ impl VolumeControlApp {
             ui_trigger,
             config: Config::new(),
             show_time: None,
-            current_opacity_linear: 0.0,
-            current_opacity_curved: 0.0,
+            current_opacity: 0.0,
         }
     }
 
@@ -71,11 +69,10 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: self
-                    .config
-                    .theme
-                    .heading_totalmix_color
-                    .linear_multiply(self.current_opacity_curved),
+                color: apply_alpha(
+                    self.config.theme.heading_totalmix_color,
+                    self.current_opacity,
+                ),
                 ..Default::default()
             },
         );
@@ -84,11 +81,7 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: self
-                    .config
-                    .theme
-                    .heading_volume_color
-                    .linear_multiply(self.current_opacity_curved),
+                color: apply_alpha(self.config.theme.heading_volume_color, self.current_opacity),
                 ..Default::default()
             },
         );
@@ -104,7 +97,7 @@ impl VolumeControlApp {
         ui.label(
             RichText::new(volume_db)
                 .size(self.config.theme.volume_readout_font_size)
-                .color(volume_readout_color.linear_multiply(self.current_opacity_curved)),
+                .color(apply_alpha(volume_readout_color, self.current_opacity)),
         );
     }
 
@@ -125,10 +118,10 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_background,
             Rounding::none(),
-            self.config
-                .theme
-                .volume_bar_background_color
-                .linear_multiply(self.current_opacity_curved),
+            apply_alpha(
+                self.config.theme.volume_bar_background_color,
+                self.current_opacity,
+            ),
         );
 
         let volume_bar_foreground = Rect::from_min_size(
@@ -146,7 +139,7 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
-            volume_bar_foreground_color.linear_multiply(self.current_opacity_curved),
+            apply_alpha(volume_bar_foreground_color, self.current_opacity),
         );
     }
 }
@@ -154,23 +147,20 @@ impl VolumeControlApp {
 impl App for VolumeControlApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // frame.set_visible(false);
+        ctx.request_repaint();
 
         CentralPanel::default()
             .frame(egui::Frame {
                 rounding: Rounding::same(self.config.theme.background_rounding),
-                fill: self
-                    .config
-                    .theme
-                    .background_color
-                    .linear_multiply(self.current_opacity_curved),
+                fill: apply_alpha(self.config.theme.background_color, self.current_opacity),
                 ..Default::default()
             })
             .show(ctx, |ui| {
+                // A global hotkey has been pressed so display the UI.
                 if self.ui_trigger.load(Ordering::SeqCst) {
                     self.ui_trigger.store(false, Ordering::SeqCst);
                     self.show_time = Some(ctx.input().time);
-                    self.current_opacity_linear = 1.0;
-                    self.current_opacity_curved = 1.0;
+                    self.current_opacity = 1.0;
                     ctx.clear_animations();
                     ctx.animate_value_with_time(Id::new("app"), 1.0, 0.0);
                     ctx.request_repaint();
@@ -184,14 +174,12 @@ impl App for VolumeControlApp {
                     }
                 }
 
-                if self.show_time.is_none() && self.current_opacity_linear > 0.0 {
-                    self.current_opacity_linear = ctx.animate_value_with_time(
+                if self.show_time.is_none() && self.current_opacity > 0.0 {
+                    self.current_opacity = ctx.animate_value_with_time(
                         Id::new("app"),
                         0.0,
                         self.config.timing.fade_out_time,
                     );
-                    self.current_opacity_curved =
-                        crate::math::curve(self.current_opacity_linear, 5.0);
                 }
 
                 let (volume_db, volume, dimmed) = {
@@ -244,4 +232,20 @@ impl App for VolumeControlApp {
     fn clear_color(&self, _visuals: &Visuals) -> Rgba {
         Rgba::TRANSPARENT
     }
+}
+
+fn apply_alpha(color: Color32, alpha: f32) -> Color32 {
+    let r = color::linear_f32_from_linear_u8(color.r()) * alpha;
+    let r = color::linear_u8_from_linear_f32(r);
+
+    let g = color::linear_f32_from_linear_u8(color.g()) * alpha;
+    let g = color::linear_u8_from_linear_f32(g);
+
+    let b = color::linear_f32_from_linear_u8(color.b()) * alpha;
+    let b = color::linear_u8_from_linear_f32(b);
+
+    let a = color::linear_f32_from_linear_u8(color.a()) * alpha;
+    let a = color::linear_u8_from_linear_f32(a);
+
+    Color32::from_rgba_premultiplied(r, g, b, a)
 }

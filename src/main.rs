@@ -13,7 +13,6 @@ mod floats;
 mod gui;
 mod hotkeys;
 mod manager;
-mod math;
 
 use comms::{UdpReceiver, UdpSender};
 use eframe::NativeOptions;
