@@ -21,7 +21,14 @@ use egui::{pos2, vec2};
 use gui::VolumeControlApp;
 use hotkeys::HotKey;
 use manager::Manager;
-use std::{net::SocketAddrV4, sync::Arc, thread};
+use std::{
+    net::SocketAddrV4,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+};
 
 fn main() {
     let native_options = NativeOptions {
@@ -44,6 +51,7 @@ fn main() {
             let receiver =
                 UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
             let manager = Arc::new(Manager::new(sender, receiver));
+            let ui_trigger = Arc::new(AtomicBool::new(false));
 
             // Create the thread that will receive volume changes from the device.
             {
@@ -66,12 +74,14 @@ fn main() {
             // message to the main GUI thread.
             {
                 let manager = Arc::clone(&manager);
+                let ui_trigger = Arc::clone(&ui_trigger);
                 thread::Builder::new()
                     .name("hotkeys".to_string())
                     .spawn(move || {
                         hotkeys::register().unwrap();
                         loop {
                             let hotkey = hotkeys::receive().unwrap();
+                            ui_trigger.store(true, Ordering::SeqCst);
                             match hotkey {
                                 HotKey::VolumeUp => manager.increase_volume().unwrap(),
                                 HotKey::VolumeDown => manager.decrease_volume().unwrap(),
@@ -84,8 +94,7 @@ fn main() {
                     .unwrap();
             }
 
-            let manager = Arc::clone(&manager);
-            Box::new(VolumeControlApp::new(cc, manager))
+            Box::new(VolumeControlApp::new(cc, manager, ui_trigger))
         }),
     );
 }

@@ -9,10 +9,14 @@ use egui::{
     FontDefinitions, FontFamily, FontId, Id, Layout, Rect, Rgba, RichText, Rounding, Sense, Style,
     TextFormat, Ui, Vec2, Visuals,
 };
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,
+    ui_trigger: Arc<AtomicBool>,
     config: Config,
     show_time: Option<f64>,
     current_opacity_linear: f32,
@@ -20,7 +24,11 @@ pub struct VolumeControlApp {
 }
 
 impl VolumeControlApp {
-    pub fn new(cc: &CreationContext<'_>, manager: Arc<Manager<UdpSender, UdpReceiver>>) -> Self {
+    pub fn new(
+        cc: &CreationContext<'_>,
+        manager: Arc<Manager<UdpSender, UdpReceiver>>,
+        ui_trigger: Arc<AtomicBool>,
+    ) -> Self {
         // Set the default font.
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
@@ -48,6 +56,7 @@ impl VolumeControlApp {
 
         Self {
             manager,
+            ui_trigger,
             config: Config::new(),
             show_time: None,
             current_opacity_linear: 0.0,
@@ -157,9 +166,9 @@ impl App for VolumeControlApp {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                if ui.button("Animate").clicked() {
+                if self.ui_trigger.load(Ordering::SeqCst) {
+                    self.ui_trigger.store(false, Ordering::SeqCst);
                     self.show_time = Some(ctx.input().time);
-
                     self.current_opacity_linear = 1.0;
                     self.current_opacity_curved = 1.0;
                     ctx.clear_animations();
