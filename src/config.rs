@@ -18,8 +18,8 @@ pub struct Theme {
     pub volume_bar_foreground_color_dimmed: Color32,
 }
 
-impl Theme {
-    pub fn new() -> Self {
+impl Default for Theme {
+    fn default() -> Self {
         Self {
             background_rounding: 10.0,
             background_color: hex_color!("#1e2328e2"),
@@ -40,14 +40,30 @@ impl Theme {
     }
 }
 
+pub struct Timing {
+    pub hide_delay: f64,
+    pub fade_out_time: f32,
+}
+
+impl Default for Timing {
+    fn default() -> Self {
+        Timing {
+            hide_delay: 2.0,
+            fade_out_time: 1.0,
+        }
+    }
+}
+
 pub struct Config {
+    pub timing: Timing,
     pub theme: Theme,
 }
 
 impl Config {
     pub fn new() -> Self {
         Self {
-            theme: Theme::new(),
+            timing: Timing::default(),
+            theme: Theme::default(),
         }
     }
 }

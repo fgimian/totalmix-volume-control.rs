@@ -6,7 +6,7 @@ use crate::{
 use eframe::{App, CreationContext};
 use egui::{
     style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
-    FontDefinitions, FontFamily, FontId, Layout, Rect, Rgba, RichText, Rounding, Sense, Style,
+    FontDefinitions, FontFamily, FontId, Id, Layout, Rect, Rgba, RichText, Rounding, Sense, Style,
     TextFormat, Ui, Vec2, Visuals,
 };
 use std::sync::Arc;
@@ -14,6 +14,9 @@ use std::sync::Arc;
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,
     config: Config,
+    show_time: Option<f64>,
+    current_opacity_linear: f32,
+    current_opacity_curved: f32,
 }
 
 impl VolumeControlApp {
@@ -46,6 +49,9 @@ impl VolumeControlApp {
         Self {
             manager,
             config: Config::new(),
+            show_time: None,
+            current_opacity_linear: 0.0,
+            current_opacity_curved: 0.0,
         }
     }
 
@@ -56,7 +62,11 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: self.config.theme.heading_totalmix_color,
+                color: self
+                    .config
+                    .theme
+                    .heading_totalmix_color
+                    .linear_multiply(self.current_opacity_curved),
                 ..Default::default()
             },
         );
@@ -65,7 +75,11 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: self.config.theme.heading_volume_color,
+                color: self
+                    .config
+                    .theme
+                    .heading_volume_color
+                    .linear_multiply(self.current_opacity_curved),
                 ..Default::default()
             },
         );
@@ -73,14 +87,15 @@ impl VolumeControlApp {
     }
 
     fn draw_volume_readout(&self, ui: &mut Ui, volume_db: String, dimmed: bool) {
+        let volume_readout_color = if dimmed {
+            self.config.theme.volume_readout_color_dimmed
+        } else {
+            self.config.theme.volume_readout_color_normal
+        };
         ui.label(
             RichText::new(volume_db)
                 .size(self.config.theme.volume_readout_font_size)
-                .color(if dimmed {
-                    self.config.theme.volume_readout_color_dimmed
-                } else {
-                    self.config.theme.volume_readout_color_normal
-                }),
+                .color(volume_readout_color.linear_multiply(self.current_opacity_curved)),
         );
     }
 
@@ -98,6 +113,15 @@ impl VolumeControlApp {
             Sense::hover(),
         );
 
+        ui.painter().rect_filled(
+            volume_bar_background,
+            Rounding::none(),
+            self.config
+                .theme
+                .volume_bar_background_color
+                .linear_multiply(self.current_opacity_curved),
+        );
+
         let volume_bar_foreground = Rect::from_min_size(
             volume_bar_background.min,
             vec2(
@@ -105,21 +129,15 @@ impl VolumeControlApp {
                 volume_bar_background.height(),
             ),
         );
-
-        ui.painter().rect_filled(
-            volume_bar_background,
-            Rounding::none(),
-            self.config.theme.volume_bar_background_color,
-        );
-
+        let volume_bar_foreground_color = if dimmed {
+            self.config.theme.volume_bar_foreground_color_dimmed
+        } else {
+            self.config.theme.volume_bar_foreground_color_normal
+        };
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
-            if dimmed {
-                self.config.theme.volume_bar_foreground_color_dimmed
-            } else {
-                self.config.theme.volume_bar_foreground_color_normal
-            },
+            volume_bar_foreground_color.linear_multiply(self.current_opacity_curved),
         );
     }
 }
@@ -131,10 +149,42 @@ impl App for VolumeControlApp {
         CentralPanel::default()
             .frame(egui::Frame {
                 rounding: Rounding::same(self.config.theme.background_rounding),
-                fill: self.config.theme.background_color,
+                fill: self
+                    .config
+                    .theme
+                    .background_color
+                    .linear_multiply(self.current_opacity_curved),
                 ..Default::default()
             })
             .show(ctx, |ui| {
+                if ui.button("Animate").clicked() {
+                    self.show_time = Some(ctx.input().time);
+
+                    self.current_opacity_linear = 1.0;
+                    self.current_opacity_curved = 1.0;
+                    ctx.clear_animations();
+                    ctx.animate_value_with_time(Id::new("app"), 1.0, 0.0);
+                    ctx.request_repaint();
+                }
+
+                if let Some(show_time) = self.show_time {
+                    if ctx.input().time - show_time >= self.config.timing.hide_delay {
+                        self.show_time = None;
+                    } else {
+                        ctx.request_repaint();
+                    }
+                }
+
+                if self.show_time.is_none() && self.current_opacity_linear > 0.0 {
+                    self.current_opacity_linear = ctx.animate_value_with_time(
+                        Id::new("app"),
+                        0.0,
+                        self.config.timing.fade_out_time,
+                    );
+                    self.current_opacity_curved =
+                        crate::math::curve(self.current_opacity_linear, 5.0);
+                }
+
                 let (volume_db, volume, dimmed) = {
                     let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
                     (volume_db, self.manager.volume(), self.manager.dimmed())
