@@ -11,11 +11,17 @@ categories = ["multimedia", "multimedia::audio"]
 
 [dependencies]
 anyhow = "1.0.66"
-eframe = "0.19.0"
 egui = { version = "0.19.0", features = ["color-hex"] }
+egui_glow = { version = "0.19.0", features = ["winit"] }
+glow = "0.11.2"
+glutin = "0.29.0"
 parking_lot = "0.12.1"
 rosc = "0.9.1"
+system_tray = { git = "https://github.com/tauri-apps/system_tray.git" }
 thiserror = "1.0.37"
+# Lock winit to the last version that didn't exhibit the behaviour described at
+# https://github.com/rust-windowing/winit/issues/2570
+winit = "=0.27.2"
 
 [dependencies.windows]
 version = "0.43.0"
@@ -24,6 +30,9 @@ features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging"
 ]
+
+[build-dependencies]
+embed-resource = "1.7.4"
 
 [profile.release]
 lto = true

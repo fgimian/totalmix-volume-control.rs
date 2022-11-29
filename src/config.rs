@@ -47,7 +47,7 @@ pub struct Timing {
 
 impl Default for Timing {
     fn default() -> Self {
-        Timing {
+        Self {
             hide_delay: 2.0,
             fade_out_time: 1.0,
         }

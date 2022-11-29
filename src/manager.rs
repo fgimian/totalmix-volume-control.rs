@@ -49,7 +49,7 @@ impl<S: Sender, R: Receiver> fmt::Debug for Manager<S, R> {
 }
 
 impl<S: Sender, R: Receiver> Manager<S, R> {
-    pub fn new(sender: S, receiver: R) -> Self {
+    pub const fn new(sender: S, receiver: R) -> Self {
         Self {
             increment: 0.02,
             fine_increment: 0.01,

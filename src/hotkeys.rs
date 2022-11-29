@@ -4,16 +4,12 @@ use windows::Win32::UI::{
     Input::KeyboardAndMouse::{
         RegisterHotKey, MOD_SHIFT, VK_VOLUME_DOWN, VK_VOLUME_MUTE, VK_VOLUME_UP,
     },
-    WindowsAndMessaging::{GetMessageW, MSG, WM_HOTKEY},
+    WindowsAndMessaging::{MSG, WM_HOTKEY},
 };
 
 #[derive(Error, Debug)]
 #[error("unable to bind the required hotkey")]
 pub struct HotKeyBindError;
-
-#[derive(Error, Debug)]
-#[error("the quit message was received")]
-pub struct QuitError;
 
 #[derive(Debug)]
 pub enum HotKey {
@@ -48,30 +44,17 @@ pub fn register() -> Result<()> {
     Ok(())
 }
 
-pub fn receive() -> Result<HotKey> {
-    loop {
-        let mut msg = MSG::default();
-        let result = unsafe { GetMessageW(&mut msg, None, 0, 0) };
-        if !result.as_bool() {
-            return Err(QuitError.into());
-        }
+pub const fn receive(msg: &MSG) -> Option<HotKey> {
+    if msg.message != WM_HOTKEY {
+        return None;
+    }
 
-        if msg.message != WM_HOTKEY {
-            continue;
-        }
-
-        // TODO: Can I make this nicer?
-        let hotkey = match msg.wParam.0 {
-            1 => Some(HotKey::VolumeUp),
-            2 => Some(HotKey::VolumeDown),
-            3 => Some(HotKey::VolumeUpFine),
-            4 => Some(HotKey::VolumeDownfine),
-            5 => Some(HotKey::Mute),
-            _ => None,
-        };
-
-        if let Some(hotkey) = hotkey {
-            return Ok(hotkey);
-        }
+    match msg.wParam.0 {
+        1 => Some(HotKey::VolumeUp),
+        2 => Some(HotKey::VolumeDown),
+        3 => Some(HotKey::VolumeUpFine),
+        4 => Some(HotKey::VolumeDownfine),
+        5 => Some(HotKey::Mute),
+        _ => None,
     }
 }

@@ -3,31 +3,22 @@ use crate::{
     config::Config,
     manager::Manager,
 };
-use eframe::{App, CreationContext};
 use egui::{
     color, style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Color32, Context,
-    Direction, FontData, FontDefinitions, FontFamily, FontId, Id, Layout, Rect, Rgba, RichText,
-    Rounding, Sense, Style, TextFormat, Ui, Vec2, Visuals,
+    Direction, FontData, FontDefinitions, FontFamily, FontId, Frame, Id, Layout, Rect, RichText,
+    Rounding, Sense, Style, TextFormat, Ui, Vec2,
 };
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,
-    ui_trigger: Arc<AtomicBool>,
     config: Config,
     show_time: Option<f64>,
     current_opacity: f32,
 }
 
 impl VolumeControlApp {
-    pub fn new(
-        cc: &CreationContext<'_>,
-        manager: Arc<Manager<UdpSender, UdpReceiver>>,
-        ui_trigger: Arc<AtomicBool>,
-    ) -> Self {
+    pub fn new(egui_ctx: &Context, manager: Arc<Manager<UdpSender, UdpReceiver>>) -> Self {
         // Set the default font.
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
@@ -39,7 +30,7 @@ impl VolumeControlApp {
             .entry(FontFamily::Proportional)
             .or_default()
             .insert(0, "Segoe UI".to_string());
-        cc.egui_ctx.set_fonts(fonts);
+        egui_ctx.set_fonts(fonts);
 
         let mut style = Style::default();
         style.spacing.item_spacing = Vec2::ZERO;
@@ -51,15 +42,90 @@ impl VolumeControlApp {
                 show_resize: true,
             };
         }
-        cc.egui_ctx.set_style(style);
+        egui_ctx.set_style(style);
 
         Self {
             manager,
-            ui_trigger,
             config: Config::new(),
             show_time: None,
             current_opacity: 0.0,
         }
+    }
+
+    pub fn draw(&mut self, egui_ctx: &Context, restart: bool) {
+        CentralPanel::default()
+            .frame(Frame {
+                rounding: Rounding::same(self.config.theme.background_rounding),
+                fill: apply_alpha(self.config.theme.background_color, self.current_opacity),
+                ..Default::default()
+            })
+            .show(egui_ctx, |ui| {
+                // A global hotkey has been pressed so display the UI.
+                if restart {
+                    self.show_time = Some(egui_ctx.input().time);
+                    self.current_opacity = 1.0;
+                    egui_ctx.clear_animations();
+                    egui_ctx.animate_value_with_time(Id::new("app"), 1.0, 0.0);
+                    egui_ctx.request_repaint();
+                }
+
+                if let Some(show_time) = self.show_time {
+                    if egui_ctx.input().time - show_time >= self.config.timing.hide_delay {
+                        self.show_time = None;
+                    } else {
+                        egui_ctx.request_repaint();
+                    }
+                }
+
+                if self.show_time.is_none() && self.current_opacity > 0.0 {
+                    self.current_opacity = egui_ctx.animate_value_with_time(
+                        Id::new("app"),
+                        0.0,
+                        self.config.timing.fade_out_time,
+                    );
+                }
+
+                let (volume_db, volume, dimmed) = {
+                    let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
+                    (volume_db, self.manager.volume(), self.manager.dimmed())
+                };
+
+                // Draw the TotalMix Volume heading.
+                ui.allocate_ui_with_layout(
+                    vec2(
+                        ui.available_width(),
+                        self.config.theme.heading_and_volume_bar_height,
+                    ),
+                    Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Max),
+                    |ui| {
+                        self.draw_heading(ui);
+                    },
+                );
+
+                // Draw the volume read-out in decibels.
+                ui.allocate_ui_with_layout(
+                    vec2(
+                        ui.available_width(),
+                        ui.available_height() - self.config.theme.heading_and_volume_bar_height,
+                    ),
+                    Layout::centered_and_justified(Direction::TopDown),
+                    |ui| {
+                        self.draw_volume_readout(ui, volume_db, dimmed);
+                    },
+                );
+
+                // Draw the volume bar that indicates the current volume.
+                ui.allocate_ui_with_layout(
+                    vec2(
+                        ui.available_width(),
+                        self.config.theme.heading_and_volume_bar_height,
+                    ),
+                    Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Min),
+                    |ui| {
+                        self.draw_volume_bar(ui, volume, dimmed);
+                    },
+                );
+            });
     }
 
     fn draw_heading(&self, ui: &mut Ui) {
@@ -141,96 +207,6 @@ impl VolumeControlApp {
             Rounding::none(),
             apply_alpha(volume_bar_foreground_color, self.current_opacity),
         );
-    }
-}
-
-impl App for VolumeControlApp {
-    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        // frame.set_visible(false);
-        ctx.request_repaint();
-
-        CentralPanel::default()
-            .frame(egui::Frame {
-                rounding: Rounding::same(self.config.theme.background_rounding),
-                fill: apply_alpha(self.config.theme.background_color, self.current_opacity),
-                ..Default::default()
-            })
-            .show(ctx, |ui| {
-                // A global hotkey has been pressed so display the UI.
-                if self.ui_trigger.load(Ordering::SeqCst) {
-                    self.ui_trigger.store(false, Ordering::SeqCst);
-                    self.show_time = Some(ctx.input().time);
-                    self.current_opacity = 1.0;
-                    ctx.clear_animations();
-                    ctx.animate_value_with_time(Id::new("app"), 1.0, 0.0);
-                    ctx.request_repaint();
-                }
-
-                if let Some(show_time) = self.show_time {
-                    if ctx.input().time - show_time >= self.config.timing.hide_delay {
-                        self.show_time = None;
-                    } else {
-                        ctx.request_repaint();
-                    }
-                }
-
-                if self.show_time.is_none() && self.current_opacity > 0.0 {
-                    self.current_opacity = ctx.animate_value_with_time(
-                        Id::new("app"),
-                        0.0,
-                        self.config.timing.fade_out_time,
-                    );
-                }
-
-                let (volume_db, volume, dimmed) = {
-                    let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
-                    (volume_db, self.manager.volume(), self.manager.dimmed())
-                };
-
-                // Draw the TotalMix Volume heading.
-                ui.allocate_ui_with_layout(
-                    vec2(
-                        ui.available_width(),
-                        self.config.theme.heading_and_volume_bar_height,
-                    ),
-                    Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Max),
-                    |ui| {
-                        self.draw_heading(ui);
-                    },
-                );
-
-                // Draw the volume read-out in decibels.
-                ui.allocate_ui_with_layout(
-                    vec2(
-                        ui.available_width(),
-                        ui.available_height() - self.config.theme.heading_and_volume_bar_height,
-                    ),
-                    Layout::centered_and_justified(Direction::TopDown),
-                    |ui| {
-                        self.draw_volume_readout(ui, volume_db, dimmed);
-                    },
-                );
-
-                // Draw the volume bar that indicates the current volume.
-                ui.allocate_ui_with_layout(
-                    vec2(
-                        ui.available_width(),
-                        self.config.theme.heading_and_volume_bar_height,
-                    ),
-                    Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Min),
-                    |ui| {
-                        self.draw_volume_bar(ui, volume, dimmed);
-                    },
-                );
-            });
-    }
-
-    // fn on_close_event(&mut self) -> bool {
-    //     false
-    // }
-
-    fn clear_color(&self, _visuals: &Visuals) -> Rgba {
-        Rgba::TRANSPARENT
     }
 }
 
