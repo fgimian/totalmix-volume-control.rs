@@ -59,7 +59,7 @@ fn main() {
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
     // Create the system tray.
-    let tray = Tray::new();
+    let tray = Tray::new().unwrap();
 
     // Create the window and OpenGL context.
     let (gl_window, gl) = create_display(&event_loop);

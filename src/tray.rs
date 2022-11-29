@@ -1,3 +1,4 @@
+use anyhow::Result;
 use system_tray::{
     icon::Icon,
     menu::{
@@ -18,7 +19,7 @@ pub struct Tray<'a> {
 }
 
 impl<'a> Tray<'a> {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         let tray_menu = Menu::new();
         let exit_menu_item = MenuItem::new("Exit", true, None);
         tray_menu.append_items(&[
@@ -37,20 +38,19 @@ impl<'a> Tray<'a> {
             &exit_menu_item,
         ]);
 
-        let icon = Icon::from_resource(1, None).unwrap();
+        let icon = Icon::from_resource(1, None)?;
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(tray_menu))
             .with_tooltip("TotalMix OSC connection active")
             .with_icon(icon)
-            .build()
-            .unwrap();
+            .build()?;
 
-        Self {
+        Ok(Self {
             tray_icon: Some(tray_icon),
             exit_menu_item,
             menu_event_receiver: menu_event_receiver(),
             tray_event_receiver: tray_event_receiver(),
-        }
+        })
     }
 
     pub fn receive_menu_event(&self) -> Option<MenuAction> {
