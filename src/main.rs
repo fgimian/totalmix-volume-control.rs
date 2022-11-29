@@ -177,7 +177,7 @@ fn main() {
             Event::UserEvent(UserEvent::HotKeyPressed) => redraw(true),
 
             Event::WindowEvent { event, .. } => {
-                if matches!(event, WindowEvent::CloseRequested | WindowEvent::Destroyed) {
+                if event == WindowEvent::Destroyed {
                     *control_flow = ControlFlow::Exit;
                 }
 
