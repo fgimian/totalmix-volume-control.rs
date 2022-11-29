@@ -18,6 +18,7 @@ impl Default for Osc {
     }
 }
 
+// TODO: Implement usage of the volume configuration.
 pub struct Volume {
     pub increment: f32,
     pub fine_increment: f32,
