@@ -1,5 +1,39 @@
 use egui::{hex_color, Color32};
 
+pub struct Osc {
+    pub outgoing_hostname: String,
+    pub outgoing_port: u16,
+    pub incoming_hostname: String,
+    pub incoming_port: u16,
+}
+
+impl Default for Osc {
+    fn default() -> Self {
+        Self {
+            outgoing_hostname: "127.0.0.1".to_string(),
+            outgoing_port: 7001,
+            incoming_hostname: "127.0.0.1".to_string(),
+            incoming_port: 9001,
+        }
+    }
+}
+
+pub struct Volume {
+    pub increment: f32,
+    pub fine_increment: f32,
+    pub max_volume: f32,
+}
+
+impl Default for Volume {
+    fn default() -> Self {
+        Self {
+            increment: 0.02,
+            fine_increment: 0.01,
+            max_volume: 1.0,
+        }
+    }
+}
+
 pub struct Theme {
     pub background_rounding: f32,
     pub background_color: Color32,
@@ -40,14 +74,18 @@ impl Default for Theme {
     }
 }
 
-pub struct Timing {
+pub struct Interface {
+    pub scaling: f32,
+    pub position_offset: f64,
     pub hide_delay: f64,
     pub fade_out_time: f32,
 }
 
-impl Default for Timing {
+impl Default for Interface {
     fn default() -> Self {
         Self {
+            scaling: 1.0,
+            position_offset: 40.0,
             hide_delay: 2.0,
             fade_out_time: 1.0,
         }
@@ -55,14 +93,18 @@ impl Default for Timing {
 }
 
 pub struct Config {
-    pub timing: Timing,
+    pub osc: Osc,
+    pub volume: Volume,
     pub theme: Theme,
+    pub interface: Interface,
 }
 
-impl Config {
-    pub fn new() -> Self {
+impl Default for Config {
+    fn default() -> Self {
         Self {
-            timing: Timing::default(),
+            osc: Osc::default(),
+            volume: Volume::default(),
+            interface: Interface::default(),
             theme: Theme::default(),
         }
     }

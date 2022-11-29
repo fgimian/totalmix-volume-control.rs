@@ -16,6 +16,7 @@ mod tray;
 mod utils;
 
 use comms::{UdpReceiver, UdpSender};
+use config::Config;
 use egui_glow::EguiGlow;
 use glow::{Context, HasContext};
 use glutin::{ContextBuilder, PossiblyCurrent, WindowedContext};
@@ -45,6 +46,9 @@ pub enum UserEvent {
 }
 
 fn main() {
+    // Load the configuration.
+    let config = Arc::new(Config::default());
+
     // Create the event loop and the custom hook for volume events.
     let (hotkey_sender, hotkey_receiver) = mpsc::channel();
     let event_loop = EventLoopBuilder::with_user_event()
@@ -62,18 +66,29 @@ fn main() {
     let tray = Tray::new().unwrap();
 
     // Create the window and OpenGL context.
-    let (gl_window, gl) = create_display(&event_loop);
+    let (gl_window, gl) = create_display(&event_loop, &config);
     let gl = Arc::new(gl);
 
     // Create the volume manager.
-    let sender = UdpSender::new(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 7002)).unwrap();
-    let receiver =
-        UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
+    let sender = UdpSender::new(SocketAddrV4::new(
+        config.osc.outgoing_hostname.parse().unwrap(),
+        config.osc.outgoing_port,
+    ))
+    .unwrap();
+    let receiver = UdpReceiver::bind(SocketAddrV4::new(
+        config.osc.incoming_hostname.parse().unwrap(),
+        config.osc.incoming_port,
+    ))
+    .unwrap();
     let manager = Arc::new(Manager::new(sender, receiver));
 
     // Create the application.
     let mut egui_glow = EguiGlow::new(&event_loop, Arc::clone(&gl));
-    let mut app = VolumeControlApp::new(&egui_glow.egui_ctx, Arc::clone(&manager));
+    let mut app = VolumeControlApp::new(
+        &egui_glow.egui_ctx,
+        Arc::clone(&manager),
+        Arc::clone(&config),
+    );
 
     // Register global hotkeys.
     hotkeys::register().unwrap();
@@ -196,6 +211,7 @@ fn main() {
 
 fn create_display(
     event_loop: &EventLoop<UserEvent>,
+    config: &Config,
 ) -> (WindowedContext<PossiblyCurrent>, Context) {
     let window_builder = WindowBuilder::new()
         .with_title("TotalMix Volume Control")
@@ -205,10 +221,13 @@ fn create_display(
         .with_drag_and_drop(false)
         .with_resizable(false)
         .with_transparent(true)
-        .with_position(LogicalPosition { x: 40.0, y: 40.0 })
+        .with_position(LogicalPosition {
+            x: config.interface.position_offset * config.interface.scaling as f64,
+            y: config.interface.position_offset * config.interface.scaling as f64,
+        })
         .with_inner_size(LogicalSize {
-            width: 165,
-            height: 165,
+            width: (165.0 * config.interface.scaling) as u32,
+            height: (165.0 * config.interface.scaling) as u32,
         })
         .with_visible(false);
 
