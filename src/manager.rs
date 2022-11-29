@@ -1,6 +1,6 @@
 use crate::{
     comms::{Receiver, Sender},
-    floats,
+    utils,
 };
 use anyhow::Result;
 use parking_lot::Mutex;
@@ -97,7 +97,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     pub fn dimmed(&self) -> bool {
-        floats::roughly_eq(self.dim(), 1.0)
+        utils::roughly_eq(self.dim(), 1.0)
     }
 
     fn dim(&self) -> f32 {
@@ -106,9 +106,9 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     pub fn initialized(&self) -> bool {
-        floats::roughly_ne(self.volume(), -1.0)
+        utils::roughly_ne(self.volume(), -1.0)
             && self.volume_db().is_some()
-            && floats::roughly_ne(self.dim(), -1.0)
+            && utils::roughly_ne(self.dim(), -1.0)
     }
 
     pub fn request_volume(&self) -> Result<()> {
@@ -177,7 +177,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
         }
 
         let mut dim = self.dim.lock();
-        let new_dim = if floats::roughly_eq(*dim, 1.0) {
+        let new_dim = if utils::roughly_eq(*dim, 1.0) {
             0.0
         } else {
             1.0
@@ -207,7 +207,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
             new_volume = self.max_volume;
         }
 
-        if floats::roughly_eq(new_volume, *volume) {
+        if utils::roughly_eq(new_volume, *volume) {
             return Ok(false);
         }
 
@@ -228,7 +228,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
             new_volume = 0.0;
         }
 
-        if floats::roughly_eq(new_volume, *volume) {
+        if utils::roughly_eq(new_volume, *volume) {
             return Ok(false);
         }
 

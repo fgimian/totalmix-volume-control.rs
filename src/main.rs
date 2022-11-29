@@ -9,11 +9,11 @@
 )]
 mod comms;
 mod config;
-mod floats;
 mod gui;
 mod hotkeys;
 mod manager;
 mod tray;
+mod utils;
 
 use comms::{UdpReceiver, UdpSender};
 use egui_glow::EguiGlow;

@@ -2,11 +2,12 @@ use crate::{
     comms::{UdpReceiver, UdpSender},
     config::Config,
     manager::Manager,
+    utils,
 };
 use egui::{
-    color, style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Color32, Context,
-    Direction, FontData, FontDefinitions, FontFamily, FontId, Frame, Id, Layout, Rect, RichText,
-    Rounding, Sense, Style, TextFormat, Ui, Vec2,
+    style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
+    FontDefinitions, FontFamily, FontId, Frame, Id, Layout, Rect, RichText, Rounding, Sense, Style,
+    TextFormat, Ui, Vec2,
 };
 use std::sync::Arc;
 
@@ -56,7 +57,7 @@ impl VolumeControlApp {
         CentralPanel::default()
             .frame(Frame {
                 rounding: Rounding::same(self.config.theme.background_rounding),
-                fill: apply_alpha(self.config.theme.background_color, self.current_opacity),
+                fill: utils::apply_alpha(self.config.theme.background_color, self.current_opacity),
                 ..Default::default()
             })
             .show(egui_ctx, |ui| {
@@ -135,7 +136,7 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: apply_alpha(
+                color: utils::apply_alpha(
                     self.config.theme.heading_totalmix_color,
                     self.current_opacity,
                 ),
@@ -147,7 +148,10 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size),
-                color: apply_alpha(self.config.theme.heading_volume_color, self.current_opacity),
+                color: utils::apply_alpha(
+                    self.config.theme.heading_volume_color,
+                    self.current_opacity,
+                ),
                 ..Default::default()
             },
         );
@@ -163,7 +167,10 @@ impl VolumeControlApp {
         ui.label(
             RichText::new(volume_db)
                 .size(self.config.theme.volume_readout_font_size)
-                .color(apply_alpha(volume_readout_color, self.current_opacity)),
+                .color(utils::apply_alpha(
+                    volume_readout_color,
+                    self.current_opacity,
+                )),
         );
     }
 
@@ -184,7 +191,7 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_background,
             Rounding::none(),
-            apply_alpha(
+            utils::apply_alpha(
                 self.config.theme.volume_bar_background_color,
                 self.current_opacity,
             ),
@@ -205,23 +212,7 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
-            apply_alpha(volume_bar_foreground_color, self.current_opacity),
+            utils::apply_alpha(volume_bar_foreground_color, self.current_opacity),
         );
     }
-}
-
-fn apply_alpha(color: Color32, alpha: f32) -> Color32 {
-    let r = color::linear_f32_from_linear_u8(color.r()) * alpha;
-    let r = color::linear_u8_from_linear_f32(r);
-
-    let g = color::linear_f32_from_linear_u8(color.g()) * alpha;
-    let g = color::linear_u8_from_linear_f32(g);
-
-    let b = color::linear_f32_from_linear_u8(color.b()) * alpha;
-    let b = color::linear_u8_from_linear_f32(b);
-
-    let a = color::linear_f32_from_linear_u8(color.a()) * alpha;
-    let a = color::linear_u8_from_linear_f32(a);
-
-    Color32::from_rgba_premultiplied(r, g, b, a)
 }
