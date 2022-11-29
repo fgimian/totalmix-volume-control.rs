@@ -13,11 +13,12 @@ mod floats;
 mod gui;
 mod hotkeys;
 mod manager;
+mod tray;
 
 use comms::{UdpReceiver, UdpSender};
 use egui_glow::EguiGlow;
 use glow::{Context, HasContext};
-use glutin::ContextBuilder;
+use glutin::{ContextBuilder, PossiblyCurrent, WindowedContext};
 use gui::VolumeControlApp;
 use hotkeys::HotKey;
 use manager::Manager;
@@ -28,68 +29,23 @@ use std::{
     thread,
     time::Instant,
 };
-use system_tray::{
-    icon::Icon,
-    menu::{menu_event_receiver, AboutMetadata, Menu, MenuItem, PredefinedMenuItem},
-    tray_event_receiver, TrayIconBuilder,
-};
+use tray::{MenuAction, Tray};
 use windows::Win32::UI::WindowsAndMessaging::MSG;
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
     event::{Event, StartCause, WindowEvent},
-    event_loop::{ControlFlow, EventLoopBuilder},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
     platform::windows::{EventLoopBuilderExtWindows, WindowBuilderExtWindows},
     window::WindowBuilder,
 };
 
 #[derive(Debug)]
 pub enum UserEvent {
-    RequestRepaint,
+    HotKeyPressed,
 }
 
 fn main() {
-    // Register global hotkeys.
-    hotkeys::register().unwrap();
-
-    // Create the system tray.
-    let tray_menu = Menu::new();
-    let quit_item = MenuItem::new("Exit", true, None);
-    tray_menu.append_items(&[
-        &PredefinedMenuItem::about(
-            None,
-            Some(AboutMetadata {
-                name: Some("TotalMix Volume Control".to_string()),
-                version: Some("1.0.0".to_string()),
-                authors: Some(vec!["Fotis Gimian".to_string()]),
-                license: Some("MIT or Apache 2.0".to_string()),
-                website: Some("https://github.com/fgimian/totalmix-volume-control".to_string()),
-                ..Default::default()
-            }),
-        ),
-        &PredefinedMenuItem::separator(),
-        &quit_item,
-    ]);
-
-    let icon = Icon::from_resource(1, None).unwrap();
-    let mut tray_icon = Some(
-        TrayIconBuilder::new()
-            .with_menu(Box::new(tray_menu))
-            .with_tooltip("TotalMix OSC connection active")
-            .with_icon(icon)
-            .build()
-            .unwrap(),
-    );
-
-    let menu_channel = menu_event_receiver();
-    let tray_channel = tray_event_receiver();
-
-    // Create the volume manager.
-    let sender = UdpSender::new(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 7002)).unwrap();
-    let receiver =
-        UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
-    let manager = Arc::new(Manager::new(sender, receiver));
-
-    // Create the event loop.
+    // Create the event loop and the custom hook for volume events.
     let (hotkey_sender, hotkey_receiver) = mpsc::channel();
     let event_loop = EventLoopBuilder::with_user_event()
         .with_msg_hook(move |msg| {
@@ -102,44 +58,25 @@ fn main() {
         .build();
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
+    // Create the system tray.
+    let tray = Tray::new();
+
     // Create the window and OpenGL context.
-    let window_builder = WindowBuilder::new()
-        .with_title("TotalMix Volume Control")
-        .with_always_on_top(true)
-        .with_decorations(false)
-        .with_skip_taskbar(true)
-        .with_drag_and_drop(false)
-        .with_resizable(false)
-        .with_transparent(true)
-        .with_position(LogicalPosition { x: 40.0, y: 40.0 })
-        .with_inner_size(LogicalSize {
-            width: 165,
-            height: 165,
-        })
-        .with_visible(false);
-
-    let gl_window = unsafe {
-        ContextBuilder::new()
-            .with_depth_buffer(0)
-            .with_stencil_buffer(0)
-            .with_vsync(true)
-            .build_windowed(window_builder, &event_loop)
-            .unwrap()
-            .make_current()
-            .unwrap()
-    };
-
-    let gl = unsafe { Context::from_loader_function(|s| gl_window.get_proc_address(s)) };
+    let (gl_window, gl) = create_display(&event_loop);
     let gl = Arc::new(gl);
 
-    // Create the egui glow integration.
-    let mut egui_glow = EguiGlow::new(&event_loop, Arc::clone(&gl));
+    // Create the volume manager.
+    let sender = UdpSender::new(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 7002)).unwrap();
+    let receiver =
+        UdpReceiver::bind(SocketAddrV4::new("127.0.0.1".parse().unwrap(), 9002)).unwrap();
+    let manager = Arc::new(Manager::new(sender, receiver));
 
     // Create the application.
-    let mut app = {
-        let manager = Arc::clone(&manager);
-        VolumeControlApp::new(&egui_glow.egui_ctx, manager)
-    };
+    let mut egui_glow = EguiGlow::new(&event_loop, Arc::clone(&gl));
+    let mut app = VolumeControlApp::new(&egui_glow.egui_ctx, Arc::clone(&manager));
+
+    // Register global hotkeys.
+    hotkeys::register().unwrap();
 
     // Create the thread that will receive volume changes from the device.
     {
@@ -163,6 +100,10 @@ fn main() {
             .name("sender".to_string())
             .spawn(move || loop {
                 let hotkey = hotkey_receiver.recv().unwrap();
+                event_loop_proxy
+                    .lock()
+                    .send_event(UserEvent::HotKeyPressed)
+                    .unwrap();
                 match hotkey {
                     HotKey::VolumeUp => manager.increase_volume().unwrap(),
                     HotKey::VolumeDown => manager.decrease_volume().unwrap(),
@@ -170,10 +111,6 @@ fn main() {
                     HotKey::VolumeDownfine => manager.decrease_volume_fine().unwrap(),
                     HotKey::Mute => manager.toggle_dim().unwrap(),
                 };
-                event_loop_proxy
-                    .lock()
-                    .send_event(UserEvent::RequestRepaint)
-                    .unwrap();
             })
             .unwrap();
     }
@@ -186,10 +123,7 @@ fn main() {
                 app.draw(egui_ctx, restart);
             });
 
-            let quit = false;
-            *control_flow = if quit {
-                ControlFlow::Exit
-            } else if repaint_after.is_zero() {
+            *control_flow = if repaint_after.is_zero() {
                 gl_window.window().request_redraw();
                 ControlFlow::Poll
             } else if let Some(repaint_after_instant) = Instant::now().checked_add(repaint_after) {
@@ -223,11 +157,12 @@ fn main() {
             // See: https://github.com/rust-windowing/winit/issues/1619
             Event::RedrawEventsCleared if cfg!(windows) => redraw(false),
             Event::RedrawRequested(_) if !cfg!(windows) => redraw(false),
-            Event::UserEvent(UserEvent::RequestRepaint) => redraw(true),
+
+            // Restart the animation sequence to display the window when a hotkey is pressed.
+            Event::UserEvent(UserEvent::HotKeyPressed) => redraw(true),
 
             Event::WindowEvent { event, .. } => {
                 if matches!(event, WindowEvent::CloseRequested | WindowEvent::Destroyed) {
-                    tray_icon.take();
                     *control_flow = ControlFlow::Exit;
                 }
 
@@ -251,17 +186,44 @@ fn main() {
             _ => (),
         }
 
-        if let Ok(menu_event) = menu_channel.try_recv() {
-            println!("Menu Channel = {:?}", menu_event);
-            if menu_event.id == quit_item.id() {
-                tray_icon.take();
-                *control_flow = ControlFlow::Exit;
-                println!("Exiting from tray");
+        if let Some(tray_menu_item) = tray.receive_menu_event() {
+            match tray_menu_item {
+                MenuAction::Exit => *control_flow = ControlFlow::Exit,
             }
         }
-
-        if let Ok(tray_event) = tray_channel.try_recv() {
-            println!("Tray Channel = {:?}", tray_event);
-        }
     });
+}
+
+fn create_display(
+    event_loop: &EventLoop<UserEvent>,
+) -> (WindowedContext<PossiblyCurrent>, Context) {
+    let window_builder = WindowBuilder::new()
+        .with_title("TotalMix Volume Control")
+        .with_always_on_top(true)
+        .with_decorations(false)
+        .with_skip_taskbar(true)
+        .with_drag_and_drop(false)
+        .with_resizable(false)
+        .with_transparent(true)
+        .with_position(LogicalPosition { x: 40.0, y: 40.0 })
+        .with_inner_size(LogicalSize {
+            width: 165,
+            height: 165,
+        })
+        .with_visible(false);
+
+    let gl_window = unsafe {
+        ContextBuilder::new()
+            .with_depth_buffer(0)
+            .with_stencil_buffer(0)
+            .with_vsync(true)
+            .build_windowed(window_builder, event_loop)
+            .unwrap()
+            .make_current()
+            .unwrap()
+    };
+
+    let gl = unsafe { Context::from_loader_function(|s| gl_window.get_proc_address(s)) };
+
+    (gl_window, gl)
 }
