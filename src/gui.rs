@@ -16,8 +16,8 @@ use crate::{
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,
     config: Arc<Config>,
+    id: Id,
     show_time: Option<f64>,
-    current_opacity: f32,
 }
 
 impl VolumeControlApp {
@@ -54,12 +54,33 @@ impl VolumeControlApp {
         Self {
             manager,
             config,
+            id: Id::new("app"),
             show_time: None,
-            current_opacity: 0.0,
         }
     }
 
     pub fn draw(&mut self, egui_ctx: &Context, restart: bool) {
+        let opacity = {
+            // A global hotkey has been pressed so display the UI.
+            if restart {
+                self.show_time = Some(egui_ctx.input().time);
+                egui_ctx.clear_animations();
+                egui_ctx.animate_value_with_time(self.id, 1.0, 0.0);
+                egui_ctx.request_repaint();
+                1.0
+            // The UI is currently visible.
+            } else if let Some(show_time) = self.show_time {
+                if egui_ctx.input().time - show_time >= self.config.interface.hide_delay {
+                    self.show_time = None;
+                }
+                egui_ctx.request_repaint();
+                1.0
+            // The hide delay has completed and we need to animate the fade out.
+            } else {
+                egui_ctx.animate_value_with_time(self.id, 0.0, self.config.interface.fade_out_time)
+            }
+        };
+
         CentralPanel::default()
             .frame(Frame {
                 rounding: Rounding::same(
@@ -69,40 +90,13 @@ impl VolumeControlApp {
                     .config
                     .theme
                     .background_color
-                    .to_colour32_scaled(self.current_opacity),
+                    .to_colour32_scaled(opacity),
                 ..Default::default()
             })
             .show(egui_ctx, |ui| {
-                // A global hotkey has been pressed so display the UI.
-                if restart {
-                    self.show_time = Some(egui_ctx.input().time);
-                    self.current_opacity = 1.0;
-                    egui_ctx.clear_animations();
-                    egui_ctx.animate_value_with_time(Id::new("app"), 1.0, 0.0);
-                    egui_ctx.request_repaint();
-                }
-
-                if let Some(show_time) = self.show_time {
-                    if egui_ctx.input().time - show_time >= self.config.interface.hide_delay {
-                        self.show_time = None;
-                    } else {
-                        egui_ctx.request_repaint();
-                    }
-                }
-
-                if self.show_time.is_none() && self.current_opacity > 0.0 {
-                    self.current_opacity = egui_ctx.animate_value_with_time(
-                        Id::new("app"),
-                        0.0,
-                        self.config.interface.fade_out_time,
-                    );
-                }
-
-                let (volume_db, volume, dimmed) = {
-                    let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
-                    (volume_db, self.manager.volume(), self.manager.dimmed())
-                };
-
+                let volume_db = self.manager.volume_db().unwrap_or_else(|| "-".to_string());
+                let volume = self.manager.volume();
+                let dimmed = self.manager.dimmed();
                 let scaling = self.config.interface.scaling;
 
                 // Draw the TotalMix Volume heading.
@@ -113,7 +107,7 @@ impl VolumeControlApp {
                     ),
                     Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Max),
                     |ui| {
-                        self.draw_heading(ui, scaling);
+                        self.draw_heading(ui, opacity, scaling);
                     },
                 );
 
@@ -126,7 +120,7 @@ impl VolumeControlApp {
                     ),
                     Layout::centered_and_justified(Direction::TopDown),
                     |ui| {
-                        self.draw_volume_readout(ui, scaling, volume_db, dimmed);
+                        self.draw_volume_readout(ui, opacity, scaling, &volume_db, dimmed);
                     },
                 );
 
@@ -138,13 +132,13 @@ impl VolumeControlApp {
                     ),
                     Layout::centered_and_justified(Direction::TopDown).with_main_align(Align::Min),
                     |ui| {
-                        self.draw_volume_bar(ui, scaling, volume, dimmed);
+                        self.draw_volume_bar(ui, opacity, scaling, volume, dimmed);
                     },
                 );
             });
     }
 
-    fn draw_heading(&self, ui: &mut Ui, scaling: f32) {
+    fn draw_heading(&self, ui: &mut Ui, opacity: f32, scaling: f32) {
         let mut job = LayoutJob::default();
         job.append(
             "TotalMix ",
@@ -155,7 +149,7 @@ impl VolumeControlApp {
                     .config
                     .theme
                     .heading_totalmix_color
-                    .to_colour32_scaled(self.current_opacity),
+                    .to_colour32_scaled(opacity),
                 ..Default::default()
             },
         );
@@ -168,14 +162,21 @@ impl VolumeControlApp {
                     .config
                     .theme
                     .heading_volume_color
-                    .to_colour32_scaled(self.current_opacity),
+                    .to_colour32_scaled(opacity),
                 ..Default::default()
             },
         );
         ui.label(job);
     }
 
-    fn draw_volume_readout(&self, ui: &mut Ui, scaling: f32, volume_db: String, dimmed: bool) {
+    fn draw_volume_readout(
+        &self,
+        ui: &mut Ui,
+        opacity: f32,
+        scaling: f32,
+        volume_db: &str,
+        dimmed: bool,
+    ) {
         let volume_readout_color = if dimmed {
             self.config.theme.volume_readout_color_dimmed
         } else {
@@ -184,11 +185,11 @@ impl VolumeControlApp {
         ui.label(
             RichText::new(volume_db)
                 .size(self.config.theme.volume_readout_font_size * scaling)
-                .color(volume_readout_color.to_colour32_scaled(self.current_opacity)),
+                .color(volume_readout_color.to_colour32_scaled(opacity)),
         );
     }
 
-    fn draw_volume_bar(&self, ui: &mut Ui, scaling: f32, volume: f32, dimmed: bool) {
+    fn draw_volume_bar(&self, ui: &mut Ui, opacity: f32, scaling: f32, volume: f32, dimmed: bool) {
         // Add a little top padding to align with the text above which has a little
         // padding due to the font used.
         ui.add_space(self.config.theme.volume_bar_top_margin * scaling);
@@ -209,7 +210,7 @@ impl VolumeControlApp {
             self.config
                 .theme
                 .volume_bar_background_color
-                .to_colour32_scaled(self.current_opacity),
+                .to_colour32_scaled(opacity),
         );
 
         let volume_bar_foreground = Rect::from_min_size(
@@ -227,7 +228,7 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
-            volume_bar_foreground_color.to_colour32_scaled(self.current_opacity),
+            volume_bar_foreground_color.to_colour32_scaled(opacity),
         );
     }
 }
