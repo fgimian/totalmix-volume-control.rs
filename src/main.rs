@@ -15,6 +15,13 @@ mod manager;
 mod tray;
 mod utils;
 
+use std::{
+    net::SocketAddrV4,
+    sync::{mpsc, Arc},
+    thread,
+    time::Instant,
+};
+
 use comms::{UdpReceiver, UdpSender};
 use config::Config;
 use egui_glow::EguiGlow;
@@ -24,12 +31,6 @@ use gui::VolumeControlApp;
 use hotkeys::HotKey;
 use manager::Manager;
 use parking_lot::Mutex;
-use std::{
-    net::SocketAddrV4,
-    sync::{mpsc, Arc},
-    thread,
-    time::Instant,
-};
 use tray::{MenuAction, Tray};
 use windows::Win32::UI::WindowsAndMessaging::MSG;
 use winit::{

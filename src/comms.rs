@@ -1,9 +1,10 @@
-use anyhow::Result;
-use rosc::OscPacket;
 use std::{
     net::{Ipv4Addr, SocketAddrV4, UdpSocket},
     time::Duration,
 };
+
+use anyhow::Result;
+use rosc::OscPacket;
 
 pub trait Sender {
     fn send(&self, packet: &OscPacket) -> Result<()>;

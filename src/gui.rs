@@ -1,15 +1,17 @@
+use std::sync::Arc;
+
+use egui::{
+    style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
+    FontDefinitions, FontFamily, FontId, Frame, Id, Layout, Rect, RichText, Rounding, Sense, Style,
+    TextFormat, Ui, Vec2,
+};
+
 use crate::{
     comms::{UdpReceiver, UdpSender},
     config::Config,
     manager::Manager,
     utils,
 };
-use egui::{
-    style::DebugOptions, text::LayoutJob, vec2, Align, CentralPanel, Context, Direction, FontData,
-    FontDefinitions, FontFamily, FontId, Frame, Id, Layout, Rect, RichText, Rounding, Sense, Style,
-    TextFormat, Ui, Vec2,
-};
-use std::sync::Arc;
 
 pub struct VolumeControlApp {
     manager: Arc<Manager<UdpSender, UdpReceiver>>,

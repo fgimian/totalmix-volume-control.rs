@@ -1,12 +1,14 @@
+use std::fmt;
+
+use anyhow::Result;
+use parking_lot::Mutex;
+use rosc::{OscMessage, OscPacket, OscType};
+use thiserror::Error;
+
 use crate::{
     comms::{Receiver, Sender},
     utils,
 };
-use anyhow::Result;
-use parking_lot::Mutex;
-use rosc::{OscMessage, OscPacket, OscType};
-use std::fmt;
-use thiserror::Error;
 
 const VOLUME_OSC_ADDR: &str = "/1/mastervolume";
 const VOLUME_DECIBELS_OSC_ADDR: &str = "/1/mastervolumeVal";
