@@ -1,5 +1,9 @@
-use egui::{hex_color, Color32};
+use std::str::FromStr;
 
+use hex_color::HexColor;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
 pub struct Osc {
     pub outgoing_hostname: String,
     pub outgoing_port: u16,
@@ -19,6 +23,7 @@ impl Default for Osc {
 }
 
 // TODO: Implement usage of the volume configuration.
+#[derive(Debug, Deserialize)]
 pub struct Volume {
     pub increment: f32,
     pub fine_increment: f32,
@@ -35,46 +40,48 @@ impl Default for Volume {
     }
 }
 
+#[derive(Debug, Deserialize)]
 pub struct Theme {
     pub background_rounding: f32,
-    pub background_color: Color32,
+    pub background_color: HexColor,
     pub heading_and_volume_bar_height: f32,
     pub heading_font_size: f32,
-    pub heading_totalmix_color: Color32,
-    pub heading_volume_color: Color32,
-    pub volume_readout_color_normal: Color32,
-    pub volume_readout_color_dimmed: Color32,
+    pub heading_totalmix_color: HexColor,
+    pub heading_volume_color: HexColor,
+    pub volume_readout_color_normal: HexColor,
+    pub volume_readout_color_dimmed: HexColor,
     pub volume_readout_font_size: f32,
     pub volume_bar_height: f32,
     pub volume_bar_top_margin: f32,
     pub volume_bar_horizontal_margin: f32,
-    pub volume_bar_background_color: Color32,
-    pub volume_bar_foreground_color_normal: Color32,
-    pub volume_bar_foreground_color_dimmed: Color32,
+    pub volume_bar_background_color: HexColor,
+    pub volume_bar_foreground_color_normal: HexColor,
+    pub volume_bar_foreground_color_dimmed: HexColor,
 }
 
 impl Default for Theme {
     fn default() -> Self {
         Self {
             background_rounding: 10.0,
-            background_color: hex_color!("#1e2328e2"),
+            background_color: HexColor::from_str("#1e2328e2").unwrap(),
             heading_and_volume_bar_height: 46.0,
             heading_font_size: 20.0,
-            heading_totalmix_color: Color32::WHITE,
-            heading_volume_color: hex_color!("#e06464"),
-            volume_readout_color_normal: Color32::WHITE,
-            volume_readout_color_dimmed: hex_color!("#ffa500"), // Orange
+            heading_totalmix_color: HexColor::WHITE,
+            heading_volume_color: HexColor::from_str("#e06464").unwrap(),
+            volume_readout_color_normal: HexColor::WHITE,
+            volume_readout_color_dimmed: HexColor::from_str("#ffa500").unwrap(), // Orange
             volume_readout_font_size: 40.0,
             volume_bar_height: 10.0,
             volume_bar_top_margin: 7.0,
             volume_bar_horizontal_margin: 26.0,
-            volume_bar_background_color: hex_color!("#333333"),
-            volume_bar_foreground_color_normal: hex_color!("#999999"),
-            volume_bar_foreground_color_dimmed: hex_color!("#996500"),
+            volume_bar_background_color: HexColor::from_str("#333333").unwrap(),
+            volume_bar_foreground_color_normal: HexColor::from_str("#999999").unwrap(),
+            volume_bar_foreground_color_dimmed: HexColor::from_str("#996500").unwrap(),
         }
     }
 }
 
+#[derive(Debug, Deserialize)]
 pub struct Interface {
     pub scaling: f32,
     pub position_offset: f64,
@@ -93,6 +100,7 @@ impl Default for Interface {
     }
 }
 
+#[derive(Debug, Deserialize)]
 pub struct Config {
     pub osc: Osc,
     pub volume: Volume,

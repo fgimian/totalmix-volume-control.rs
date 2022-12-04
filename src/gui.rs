@@ -7,10 +7,10 @@ use egui::{
 };
 
 use crate::{
+    colors::ToColor32,
     comms::{UdpReceiver, UdpSender},
     config::Config,
     manager::Manager,
-    utils,
 };
 
 pub struct VolumeControlApp {
@@ -65,7 +65,11 @@ impl VolumeControlApp {
                 rounding: Rounding::same(
                     self.config.theme.background_rounding * self.config.interface.scaling,
                 ),
-                fill: utils::apply_alpha(self.config.theme.background_color, self.current_opacity),
+                fill: self
+                    .config
+                    .theme
+                    .background_color
+                    .to_colour32_scaled(self.current_opacity),
                 ..Default::default()
             })
             .show(egui_ctx, |ui| {
@@ -147,10 +151,11 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size * scaling),
-                color: utils::apply_alpha(
-                    self.config.theme.heading_totalmix_color,
-                    self.current_opacity,
-                ),
+                color: self
+                    .config
+                    .theme
+                    .heading_totalmix_color
+                    .to_colour32_scaled(self.current_opacity),
                 ..Default::default()
             },
         );
@@ -159,10 +164,11 @@ impl VolumeControlApp {
             0.0,
             TextFormat {
                 font_id: FontId::proportional(self.config.theme.heading_font_size * scaling),
-                color: utils::apply_alpha(
-                    self.config.theme.heading_volume_color,
-                    self.current_opacity,
-                ),
+                color: self
+                    .config
+                    .theme
+                    .heading_volume_color
+                    .to_colour32_scaled(self.current_opacity),
                 ..Default::default()
             },
         );
@@ -178,10 +184,7 @@ impl VolumeControlApp {
         ui.label(
             RichText::new(volume_db)
                 .size(self.config.theme.volume_readout_font_size * scaling)
-                .color(utils::apply_alpha(
-                    volume_readout_color,
-                    self.current_opacity,
-                )),
+                .color(volume_readout_color.to_colour32_scaled(self.current_opacity)),
         );
     }
 
@@ -203,10 +206,10 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_background,
             Rounding::none(),
-            utils::apply_alpha(
-                self.config.theme.volume_bar_background_color,
-                self.current_opacity,
-            ),
+            self.config
+                .theme
+                .volume_bar_background_color
+                .to_colour32_scaled(self.current_opacity),
         );
 
         let volume_bar_foreground = Rect::from_min_size(
@@ -224,7 +227,7 @@ impl VolumeControlApp {
         ui.painter().rect_filled(
             volume_bar_foreground,
             Rounding::none(),
-            utils::apply_alpha(volume_bar_foreground_color, self.current_opacity),
+            volume_bar_foreground_color.to_colour32_scaled(self.current_opacity),
         );
     }
 }

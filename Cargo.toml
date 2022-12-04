@@ -15,10 +15,13 @@ egui = { version = "0.19.0", features = ["color-hex"] }
 egui_glow = { version = "0.19.0", features = ["winit"] }
 glow = "0.11.2"
 glutin = "0.29.0"
+hex_color = { version = "2.0.0", features = ["serde"] }
 parking_lot = "0.12.1"
 rosc = "0.9.1"
+serde = "1.0.148"
 system_tray = { git = "https://github.com/tauri-apps/system_tray.git" }
 thiserror = "1.0.37"
+toml = "0.5.8"
 # Lock winit to the last version that didn't exhibit the behaviour described at
 # https://github.com/rust-windowing/winit/issues/2570
 winit = "=0.27.2"

@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     comms::{Receiver, Sender},
-    utils,
+    floats::RoughEq,
 };
 
 const VOLUME_OSC_ADDR: &str = "/1/mastervolume";
@@ -99,7 +99,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     pub fn dimmed(&self) -> bool {
-        utils::roughly_eq(self.dim(), 1.0)
+        self.dim().roughly_eq(1.0)
     }
 
     fn dim(&self) -> f32 {
@@ -108,9 +108,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     pub fn initialized(&self) -> bool {
-        utils::roughly_ne(self.volume(), -1.0)
-            && self.volume_db().is_some()
-            && utils::roughly_ne(self.dim(), -1.0)
+        self.volume().roughly_ne(-1.0) && self.volume_db().is_some() && self.dim().roughly_ne(-1.0)
     }
 
     pub fn request_volume(&self) -> Result<()> {
@@ -179,11 +177,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
         }
 
         let mut dim = self.dim.lock();
-        let new_dim = if utils::roughly_eq(*dim, 1.0) {
-            0.0
-        } else {
-            1.0
-        };
+        let new_dim = if (*dim).roughly_eq(1.0) { 0.0 } else { 1.0 };
         self.send(DIM_OSC_ADDR, 1.0)?;
         *dim = new_dim;
 
@@ -209,7 +203,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
             new_volume = self.max_volume;
         }
 
-        if utils::roughly_eq(new_volume, *volume) {
+        if new_volume.roughly_eq(*volume) {
             return Ok(false);
         }
 
@@ -230,7 +224,7 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
             new_volume = 0.0;
         }
 
-        if utils::roughly_eq(new_volume, *volume) {
+        if new_volume.roughly_eq(*volume) {
             return Ok(false);
         }
 

@@ -7,13 +7,14 @@
     // clippy::expect_used,
     // clippy::unwrap_used
 )]
+mod colors;
 mod comms;
 mod config;
+mod floats;
 mod gui;
 mod hotkeys;
 mod manager;
 mod tray;
-mod utils;
 
 use std::{
     net::SocketAddrV4,
