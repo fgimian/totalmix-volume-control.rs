@@ -147,11 +147,13 @@ fn main() {
     }
 
     // Run the event loop.
-    let mut visible = false;
+    let mut display_draw = false;
+    let mut window_visible = false;
+
     event_loop.run(move |event, _target, control_flow| {
         let mut redraw = |restart| {
             let repaint_after = egui_glow.run(gl_window.window(), |egui_ctx| {
-                app.draw(egui_ctx, restart);
+                display_draw = app.draw(egui_ctx, restart);
             });
 
             *control_flow = if repaint_after.is_zero() {
@@ -172,13 +174,21 @@ fn main() {
             gl_window.swap_buffers().unwrap();
 
             // Set the window to visible when it's ready to avoid a flash of white.
-            if !visible {
-                gl_window.window().set_visible(true);
-                visible = true;
+            if display_draw {
+                if !window_visible {
+                    gl_window.window().set_visible(true);
 
-                // Allow the mouse cursor to pass through the window.
-                // (this must be set after the window is made visible)
-                gl_window.window().set_cursor_hittest(false).unwrap();
+                    // Allow the mouse cursor to pass through the window.
+                    // (this must be set after the window is made visible)
+                    gl_window.window().set_cursor_hittest(false).unwrap();
+
+                    window_visible = true;
+                }
+            } else {
+                if window_visible {
+                    gl_window.window().set_visible(false);
+                    window_visible = false;
+                }
             }
         };
 

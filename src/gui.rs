@@ -59,7 +59,11 @@ impl VolumeControlApp {
         }
     }
 
-    pub fn draw(&mut self, egui_ctx: &Context, restart: bool) {
+    pub fn draw(&mut self, egui_ctx: &Context, restart: bool) -> bool {
+        if !restart && self.current_opacity == 0.0 {
+            return false;
+        }
+
         CentralPanel::default()
             .frame(Frame {
                 rounding: Rounding::same(
@@ -142,6 +146,8 @@ impl VolumeControlApp {
                     },
                 );
             });
+
+        true
     }
 
     fn draw_heading(&self, ui: &mut Ui, scaling: f32) {
