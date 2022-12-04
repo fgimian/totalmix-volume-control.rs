@@ -12,10 +12,10 @@ impl ToColor32 for HexColor {
     }
 
     fn to_colour32_scaled(&self, scale: f32) -> Color32 {
-        let r = fast_round(self.r as f32 * scale);
-        let g = fast_round(self.g as f32 * scale);
-        let b = fast_round(self.b as f32 * scale);
-        let a = fast_round(self.a as f32 * scale);
+        let r = fast_round(f32::from(self.r) * scale);
+        let g = fast_round(f32::from(self.g) * scale);
+        let b = fast_round(f32::from(self.b) * scale);
+        let a = fast_round(f32::from(self.a) * scale);
         Color32::from_rgba_premultiplied(r, g, b, a)
     }
 }

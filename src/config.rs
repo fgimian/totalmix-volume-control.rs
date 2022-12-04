@@ -114,22 +114,11 @@ impl Default for Interface {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub osc: Osc,
     pub volume: Volume,
     pub theme: Theme,
     pub interface: Interface,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            osc: Osc::default(),
-            volume: Volume::default(),
-            interface: Interface::default(),
-            theme: Theme::default(),
-        }
-    }
 }

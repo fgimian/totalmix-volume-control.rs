@@ -50,13 +50,13 @@ pub enum UserEvent {
 
 fn main() {
     // Load the configuration.
-    let config = match get_default_config_path() {
-        Ok(config_path) if config_path.is_file() => {
+    let config = get_default_config_path().map_or_else(
+        |_error| Config::default(),
+        |config_path| {
             let config = fs::read_to_string(&config_path).unwrap();
             toml::from_str::<Config>(&config).unwrap()
-        }
-        _ => Config::default(),
-    };
+        },
+    );
     let config = Arc::new(config);
 
     // Create the event loop and the custom hook for volume events.
@@ -238,8 +238,8 @@ fn create_display(
         .with_resizable(false)
         .with_transparent(true)
         .with_position(LogicalPosition {
-            x: config.interface.position_offset * config.interface.scaling as f64,
-            y: config.interface.position_offset * config.interface.scaling as f64,
+            x: config.interface.position_offset * f64::from(config.interface.scaling),
+            y: config.interface.position_offset * f64::from(config.interface.scaling),
         })
         .with_inner_size(LogicalSize {
             width: (165.0 * config.interface.scaling) as u32,

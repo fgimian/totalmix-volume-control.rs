@@ -6,15 +6,15 @@ pub trait RoughEq<T> {
     }
 }
 
-impl RoughEq<f32> for f32 {
-    fn roughly_eq(&self, other: f32) -> bool {
-        (self - other).abs() < f32::EPSILON
+impl RoughEq<Self> for f32 {
+    fn roughly_eq(&self, other: Self) -> bool {
+        (self - other).abs() < Self::EPSILON
     }
 }
 
-impl RoughEq<f64> for f64 {
-    fn roughly_eq(&self, other: f64) -> bool {
-        (self - other).abs() < f64::EPSILON
+impl RoughEq<Self> for f64 {
+    fn roughly_eq(&self, other: Self) -> bool {
+        (self - other).abs() < Self::EPSILON
     }
 }
 
