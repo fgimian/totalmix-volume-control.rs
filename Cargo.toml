@@ -31,6 +31,7 @@ version = "0.43.0"
 features = [
     "Win32_Foundation",
     "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging"
 ]
 

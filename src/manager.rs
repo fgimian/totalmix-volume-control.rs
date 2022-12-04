@@ -64,29 +64,29 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
         }
     }
 
-    // pub fn increment(&mut self, increment: f32) -> Result<&Self> {
-    //     if !(0.0..0.10).contains(&increment) {
-    //         return Err(IncrementRangeError.into());
-    //     }
-    //     self.increment = increment;
-    //     Ok(self)
-    // }
+    pub fn set_increment(&mut self, increment: f32) -> Result<()> {
+        if !(0.0..=0.10).contains(&increment) {
+            return Err(IncrementRangeError.into());
+        }
+        self.increment = increment;
+        Ok(())
+    }
 
-    // pub fn fine_increment(&mut self, fine_increment: f32) -> Result<&Self> {
-    //     if !(0.0..0.05).contains(&fine_increment) {
-    //         return Err(FineIncrementRangeError.into());
-    //     }
-    //     self.fine_increment = fine_increment;
-    //     Ok(self)
-    // }
+    pub fn set_fine_increment(&mut self, fine_increment: f32) -> Result<()> {
+        if !(0.0..=0.05).contains(&fine_increment) {
+            return Err(FineIncrementRangeError.into());
+        }
+        self.fine_increment = fine_increment;
+        Ok(())
+    }
 
-    // pub fn max_volume(&mut self, max_volume: f32) -> Result<&Self> {
-    //     if !(0.0..1.0).contains(&max_volume) {
-    //         return Err(MaxVolumeRangeError.into());
-    //     }
-    //     self.max_volume = max_volume;
-    //     Ok(self)
-    // }
+    pub fn set_max_volume(&mut self, max_volume: f32) -> Result<()> {
+        if !(0.0..=1.0).contains(&max_volume) {
+            return Err(MaxVolumeRangeError.into());
+        }
+        self.max_volume = max_volume;
+        Ok(())
+    }
 
     pub fn volume(&self) -> f32 {
         let volume = self.volume.lock();

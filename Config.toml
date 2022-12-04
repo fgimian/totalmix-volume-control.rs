@@ -1,0 +1,60 @@
+[osc]
+# The hostname and port that TotalMix Volume Control should send to.  This should be set
+# to match the "Port incoming" setting in TotalMixFX.
+outgoing_hostname = "127.0.0.1"
+outgoing_port = 7001
+
+# The hostname and port that TotalMix Volume Control should receive from.  This should be set
+# to match the "Port outgoing" setting in TotalMixFX.
+incoming_hostname = "127.0.0.1"
+incoming_port = 9001
+
+[volume]
+# The amount that the volume should be increased when using the volume keys (with a max of 0.10
+# which will increase the volume by 10%).
+increment = 0.02
+
+# The amount that the volume should be increased when using the volume keys and holding shift down
+# (with a max of 0.05 which will increase the volume by 5%).
+fine_increment = 0.01
+
+# The maximum volume to send (with a max of 1.0 which is 100% volume).
+max_volume = 1.0
+
+[theme]
+# The main widget background corner rounding and color.
+background_rounding = 10.0
+background_color = "#1e2328e2"
+
+# The TotalMix Volume heading height, text colors and font s ize.
+heading_and_volume_bar_height = 46.0
+heading_totalmix_color = "#ffffff"
+heading_volume_color = "#e06464"
+heading_font_size = 20.0
+
+# The main decibel volume readout text colors and font size.
+volume_readout_color_normal = "#ffffff"
+volume_readout_color_dimmed = "#ffa500"  # Orange
+volume_readout_font_size = 40.0
+
+# The horizontal volume bar height, margins and colors.
+volume_bar_height = 10.0
+volume_bar_top_margin = 7.0
+volume_bar_horizontal_margin = 26.0
+volume_bar_background_color = "#333333"
+volume_bar_foreground_color_normal = "#999999"
+volume_bar_foreground_color_dimmed = "#996500"
+
+[interface]
+# Scale the interface by a particular factor (e.g. 2.0 will be twice as large).
+scaling = 1.0
+
+# The position offset from the top left corner to display the widget at.
+position_offset = 40.0
+
+# The amount of time in seconds to display the widget upon hitting the volume keys before
+# beginning the fade out animation.
+hide_delay = 2.0
+
+# The duration of the fade out animation in seconds.
+fade_out_time = 1.0

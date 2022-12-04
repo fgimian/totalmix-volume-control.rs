@@ -1,9 +1,21 @@
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
+use anyhow::Result;
 use hex_color::HexColor;
 use serde::Deserialize;
+use windows::Win32::UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KF_FLAG_DEFAULT};
+
+pub fn get_default_config_path() -> Result<PathBuf> {
+    let path = unsafe {
+        SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, None)?.to_string()?
+    };
+    Ok(PathBuf::from_str(&path)?
+        .join("TotalMix Volume Control")
+        .join("Config.toml"))
+}
 
 #[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Osc {
     pub outgoing_hostname: String,
     pub outgoing_port: u16,
@@ -22,8 +34,8 @@ impl Default for Osc {
     }
 }
 
-// TODO: Implement usage of the volume configuration.
 #[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Volume {
     pub increment: f32,
     pub fine_increment: f32,
@@ -41,13 +53,14 @@ impl Default for Volume {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Theme {
     pub background_rounding: f32,
     pub background_color: HexColor,
     pub heading_and_volume_bar_height: f32,
-    pub heading_font_size: f32,
     pub heading_totalmix_color: HexColor,
     pub heading_volume_color: HexColor,
+    pub heading_font_size: f32,
     pub volume_readout_color_normal: HexColor,
     pub volume_readout_color_dimmed: HexColor,
     pub volume_readout_font_size: f32,
@@ -65,9 +78,9 @@ impl Default for Theme {
             background_rounding: 10.0,
             background_color: HexColor::from_str("#1e2328e2").unwrap(),
             heading_and_volume_bar_height: 46.0,
-            heading_font_size: 20.0,
             heading_totalmix_color: HexColor::WHITE,
             heading_volume_color: HexColor::from_str("#e06464").unwrap(),
+            heading_font_size: 20.0,
             volume_readout_color_normal: HexColor::WHITE,
             volume_readout_color_dimmed: HexColor::from_str("#ffa500").unwrap(), // Orange
             volume_readout_font_size: 40.0,
@@ -82,6 +95,7 @@ impl Default for Theme {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Interface {
     pub scaling: f32,
     pub position_offset: f64,
@@ -101,6 +115,7 @@ impl Default for Interface {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct Config {
     pub osc: Osc,
     pub volume: Volume,

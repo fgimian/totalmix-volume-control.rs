@@ -17,6 +17,7 @@ mod manager;
 mod tray;
 
 use std::{
+    fs,
     net::SocketAddrV4,
     sync::{mpsc, Arc},
     thread,
@@ -24,7 +25,7 @@ use std::{
 };
 
 use comms::{UdpReceiver, UdpSender};
-use config::Config;
+use config::{get_default_config_path, Config};
 use egui_glow::EguiGlow;
 use glow::{Context, HasContext};
 use glutin::{ContextBuilder, PossiblyCurrent, WindowedContext};
@@ -49,7 +50,14 @@ pub enum UserEvent {
 
 fn main() {
     // Load the configuration.
-    let config = Arc::new(Config::default());
+    let config = match get_default_config_path() {
+        Ok(config_path) if config_path.is_file() => {
+            let config = fs::read_to_string(&config_path).unwrap();
+            toml::from_str::<Config>(&config).unwrap()
+        }
+        _ => Config::default(),
+    };
+    let config = Arc::new(config);
 
     // Create the event loop and the custom hook for volume events.
     let (hotkey_sender, hotkey_receiver) = mpsc::channel();
@@ -82,7 +90,13 @@ fn main() {
         config.osc.incoming_port,
     ))
     .unwrap();
-    let manager = Arc::new(Manager::new(sender, receiver));
+    let mut manager = Manager::new(sender, receiver);
+    manager.set_increment(config.volume.increment).unwrap();
+    manager
+        .set_fine_increment(config.volume.fine_increment)
+        .unwrap();
+    manager.set_max_volume(config.volume.max_volume).unwrap();
+    let manager = Arc::new(manager);
 
     // Create the application.
     let mut egui_glow = EguiGlow::new(&event_loop, Arc::clone(&gl));
