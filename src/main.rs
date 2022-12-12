@@ -24,14 +24,9 @@ use std::{
 };
 
 use anyhow::Result;
-use comms::{UdpReceiver, UdpSender};
-use config::{get_user_config, Config};
 use egui_glow::EguiGlow;
 use glow::{Context, HasContext};
 use glutin::{ContextBuilder, PossiblyCurrent, WindowedContext};
-use gui::VolumeControlApp;
-use hotkeys::HotKey;
-use manager::Manager;
 use parking_lot::Mutex;
 use tray::{MenuAction, Tray};
 use windows::Win32::UI::WindowsAndMessaging::MSG;
@@ -41,6 +36,14 @@ use winit::{
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
     platform::windows::{EventLoopBuilderExtWindows, WindowBuilderExtWindows},
     window::WindowBuilder,
+};
+
+use crate::{
+    comms::{UdpReceiver, UdpSender},
+    config::{get_user_config, Config},
+    gui::VolumeControlApp,
+    hotkeys::HotKey,
+    manager::Manager,
 };
 
 #[derive(Debug)]
