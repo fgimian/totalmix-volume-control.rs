@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, io};
 
 use anyhow::Result;
 use parking_lot::Mutex;
@@ -33,8 +33,8 @@ pub struct Manager<S: Sender, R: Receiver> {
     volume: Mutex<f32>,
     volume_db: Mutex<Option<String>>,
     dim: Mutex<f32>,
-    sender: S,
-    receiver: R,
+    sender: Option<S>,
+    receiver: Option<R>,
 }
 
 impl<S: Sender, R: Receiver> fmt::Debug for Manager<S, R> {
@@ -50,8 +50,8 @@ impl<S: Sender, R: Receiver> fmt::Debug for Manager<S, R> {
     }
 }
 
-impl<S: Sender, R: Receiver> Manager<S, R> {
-    pub const fn new(sender: S, receiver: R) -> Self {
+impl<S: Sender, R: Receiver> Default for Manager<S, R> {
+    fn default() -> Self {
         Self {
             increment: 0.02,
             fine_increment: 0.01,
@@ -59,9 +59,19 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
             volume: Mutex::new(-1.0),
             volume_db: Mutex::new(None),
             dim: Mutex::new(-1.0),
-            sender,
-            receiver,
+            sender: None,
+            receiver: None,
         }
+    }
+}
+
+impl<S: Sender, R: Receiver> Manager<S, R> {
+    pub fn set_sender(&mut self, sender: S) {
+        self.sender = Some(sender);
+    }
+
+    pub fn set_receiver(&mut self, receiver: R) {
+        self.receiver = Some(receiver);
     }
 
     pub fn set_increment(&mut self, increment: f32) -> Result<()> {
@@ -117,7 +127,11 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     pub fn recieve_volume(&self) -> Result<bool> {
-        let packet = self.receiver.receive()?;
+        let receiver = match self.receiver.as_ref() {
+            Some(receiver) => receiver,
+            None => return Err(io::Error::from(io::ErrorKind::NotConnected).into()),
+        };
+        let packet = receiver.receive()?;
         let mut received = false;
 
         if let OscPacket::Bundle(bundle) = packet {
@@ -185,11 +199,15 @@ impl<S: Sender, R: Receiver> Manager<S, R> {
     }
 
     fn send(&self, addr: &str, value: f32) -> Result<()> {
+        let sender = match self.sender.as_ref() {
+            Some(sender) => sender,
+            None => return Err(io::Error::from(io::ErrorKind::NotConnected).into()),
+        };
         let packet = OscPacket::Message(OscMessage {
             addr: addr.to_string(),
             args: vec![OscType::Float(value)],
         });
-        self.sender.send(&packet)
+        sender.send(&packet)
     }
 
     fn increase_volume_by_increment(&self, increment: f32) -> Result<bool> {

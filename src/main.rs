@@ -90,7 +90,9 @@ fn main() {
         config.osc.incoming_port,
     ))
     .unwrap();
-    let mut manager = Manager::new(sender, receiver);
+    let mut manager = Manager::default();
+    manager.set_sender(sender);
+    manager.set_receiver(receiver);
     manager.set_increment(config.volume.increment).unwrap();
     manager
         .set_fine_increment(config.volume.fine_increment)
