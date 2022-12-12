@@ -259,7 +259,7 @@ fn create_display(
             .map_err(|(_wrapper, error)| error)?
     };
 
-    let gl = unsafe { Context::from_loader_function(|s| gl_window.get_proc_address(s)) };
+    let gl = unsafe { Context::from_loader_function(|addr| gl_window.get_proc_address(addr)) };
 
     Ok((gl_window, gl))
 }
