@@ -82,20 +82,20 @@ impl Default for Theme {
     fn default() -> Self {
         Self {
             background_rounding: 10.0,
-            background_color: HexColor::from_str("#1e2328e2").unwrap(),
+            background_color: HexColor::from_u32(0x1e2328e2),
             heading_and_volume_bar_height: 46.0,
             heading_totalmix_color: HexColor::WHITE,
-            heading_volume_color: HexColor::from_str("#e06464").unwrap(),
+            heading_volume_color: HexColor::from_u32(0xe06464),
             heading_font_size: 20.0,
             volume_readout_color_normal: HexColor::WHITE,
-            volume_readout_color_dimmed: HexColor::from_str("#ffa500").unwrap(), // Orange
+            volume_readout_color_dimmed: HexColor::from_u32(0xffa500), // Orange
             volume_readout_font_size: 40.0,
             volume_bar_height: 10.0,
             volume_bar_top_margin: 7.0,
             volume_bar_horizontal_margin: 26.0,
-            volume_bar_background_color: HexColor::from_str("#333333").unwrap(),
-            volume_bar_foreground_color_normal: HexColor::from_str("#999999").unwrap(),
-            volume_bar_foreground_color_dimmed: HexColor::from_str("#996500").unwrap(),
+            volume_bar_background_color: HexColor::from_u32(0x333333),
+            volume_bar_foreground_color_normal: HexColor::from_u32(0x999999),
+            volume_bar_foreground_color_dimmed: HexColor::from_u32(0x996500),
         }
     }
 }

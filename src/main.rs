@@ -7,6 +7,7 @@
     // clippy::expect_used,
     // clippy::unwrap_used
 )]
+#![allow(clippy::unreadable_literal)]
 mod colors;
 mod comms;
 mod config;
