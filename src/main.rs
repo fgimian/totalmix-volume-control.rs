@@ -23,6 +23,7 @@ use std::{
     time::Instant,
 };
 
+use anyhow::Result;
 use comms::{UdpReceiver, UdpSender};
 use config::{get_user_config, Config};
 use egui_glow::EguiGlow;
@@ -72,7 +73,7 @@ fn main() {
     let tray = Tray::new().unwrap();
 
     // Create the window and OpenGL context.
-    let (gl_window, gl) = create_display(&event_loop, &config);
+    let (gl_window, gl) = create_display(&event_loop, &config).unwrap();
     let gl = Arc::new(gl);
 
     // Create the volume manager.
@@ -224,7 +225,7 @@ fn main() {
 fn create_display(
     event_loop: &EventLoop<UserEvent>,
     config: &Config,
-) -> (WindowedContext<PossiblyCurrent>, Context) {
+) -> Result<(WindowedContext<PossiblyCurrent>, Context)> {
     let window_builder = WindowBuilder::new()
         .with_title("TotalMix Volume Control")
         .with_always_on_top(true)
@@ -248,13 +249,12 @@ fn create_display(
             .with_depth_buffer(0)
             .with_stencil_buffer(0)
             .with_vsync(true)
-            .build_windowed(window_builder, event_loop)
-            .unwrap()
+            .build_windowed(window_builder, event_loop)?
             .make_current()
-            .unwrap()
+            .map_err(|(_wrapper, error)| error)?
     };
 
     let gl = unsafe { Context::from_loader_function(|s| gl_window.get_proc_address(s)) };
 
-    (gl_window, gl)
+    Ok((gl_window, gl))
 }
