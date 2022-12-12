@@ -17,7 +17,6 @@ mod manager;
 mod tray;
 
 use std::{
-    fs,
     net::SocketAddrV4,
     sync::{mpsc, Arc},
     thread,
@@ -25,7 +24,7 @@ use std::{
 };
 
 use comms::{UdpReceiver, UdpSender};
-use config::{get_default_config_path, Config};
+use config::{get_user_config, Config};
 use egui_glow::EguiGlow;
 use glow::{Context, HasContext};
 use glutin::{ContextBuilder, PossiblyCurrent, WindowedContext};
@@ -50,13 +49,10 @@ pub enum UserEvent {
 
 fn main() {
     // Load the configuration.
-    let config = get_default_config_path().map_or_else(
-        |_error| Config::default(),
-        |config_path| {
-            let config = fs::read_to_string(&config_path).unwrap();
-            toml::from_str::<Config>(&config).unwrap()
-        },
-    );
+    let config = match get_user_config() {
+        Ok(config) => config,
+        Err(_) => Config::default(),
+    };
     let config = Arc::new(config);
 
     // Create the event loop and the custom hook for volume events.

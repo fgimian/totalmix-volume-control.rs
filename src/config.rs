@@ -1,11 +1,17 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use anyhow::Result;
 use hex_color::HexColor;
 use serde::Deserialize;
 use windows::Win32::UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KF_FLAG_DEFAULT};
 
-pub fn get_default_config_path() -> Result<PathBuf> {
+pub fn get_user_config() -> Result<Config> {
+    let config_path = get_default_config_path()?;
+    let config = fs::read_to_string(&config_path)?;
+    Ok(toml::from_str::<Config>(&config)?)
+}
+
+fn get_default_config_path() -> Result<PathBuf> {
     let path = unsafe {
         SHGetKnownFolderPath(&FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, None)?.to_string()?
     };
