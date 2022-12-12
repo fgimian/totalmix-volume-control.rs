@@ -54,9 +54,7 @@ impl<'a> Tray<'a> {
 
     pub fn set_tooltip(&mut self, text: &str) -> Result<()> {
         if let Some(tray_icon) = self.tray_icon.as_mut() {
-            return tray_icon
-                .set_tooltip(Some(text))
-                .map_err(|error| error.into());
+            return tray_icon.set_tooltip(Some(text)).map_err(Into::into);
         }
         Ok(())
     }
