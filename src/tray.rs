@@ -41,7 +41,6 @@ impl<'a> Tray<'a> {
         let icon = Icon::from_resource(1, None)?;
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(tray_menu))
-            .with_tooltip("TotalMix OSC connection active")
             .with_icon(icon)
             .build()?;
 
@@ -51,6 +50,15 @@ impl<'a> Tray<'a> {
             menu_event_receiver: menu_event_receiver(),
             tray_event_receiver: tray_event_receiver(),
         })
+    }
+
+    pub fn set_tooltip(&mut self, text: &str) -> Result<()> {
+        if let Some(tray_icon) = self.tray_icon.as_mut() {
+            return tray_icon
+                .set_tooltip(Some(text))
+                .map_err(|error| error.into());
+        }
+        Ok(())
     }
 
     pub fn receive_menu_event(&self) -> Option<MenuAction> {
