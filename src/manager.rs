@@ -40,9 +40,9 @@ pub struct Manager<S: Sender, R: Receiver> {
 impl<S: Sender, R: Receiver> fmt::Debug for Manager<S, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("VolumeManager")
-            // .field("increment", &self.increment)
-            // .field("fine_increment", &self.fine_increment)
-            // .field("max_volume", &self.max_volume)
+            .field("increment", &self.increment)
+            .field("fine_increment", &self.fine_increment)
+            .field("max_volume", &self.max_volume)
             .field("volume", &self.volume())
             .field("volume_db", &self.volume_db())
             .field("dimmed", &self.dimmed())
